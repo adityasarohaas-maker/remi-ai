@@ -6,6 +6,7 @@ import { localParts, dayRangeUtc } from '@/core/time';
 import { reminderStates } from '@/core/reminders';
 import { summarizeDay, type DayEvent } from '@/core/day-summary';
 import { buildDigestMessages } from '@/core/digest-prompt';
+import { factsNote } from '@/core/digest-fallback';
 
 export async function generateDigest(householdId: string, dayArg?: string) {
   const db = supabaseAdmin();
@@ -20,12 +21,14 @@ export async function generateDigest(householdId: string, dayArg?: string) {
     .order('created_at').limit(2000);
   const minutes = day === local.day ? local.minutes : 24 * 60;
   const facts = summarizeDay(day, (events ?? []) as DayEvent[], reminderStates(ctx.routine, ctx.doneIds, minutes), tz);
-  const summary = await chatText(buildDigestMessages(ctx.household.preferredName, facts), {
-    model: MODELS.report(), maxTokens: 700, temperature: 0.3, timeoutMs: 60_000,
-  });
-  if (!summary) throw new Error('empty digest');
+  // No key, a Nebius outage or an empty reply still gives the family a note, written from the facts alone.
+  let model = MODELS.report();
+  let summary = await chatText(buildDigestMessages(ctx.household.preferredName, facts), {
+    model, maxTokens: 700, temperature: 0.3, timeoutMs: 60_000,
+  }).catch((e) => { console.error('digest model failed', e); return ''; });
+  if (!summary) { summary = factsNote(ctx.household.preferredName, facts); model = 'facts-only'; }
   await db.from('digests').upsert(
-    { household_id: householdId, day, facts, summary, model: MODELS.report() },
+    { household_id: householdId, day, facts, summary, model },
     { onConflict: 'household_id,day' },
   );
   return { day, summary, facts };
