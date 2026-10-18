@@ -39,3 +39,36 @@ export async function chatText(
   );
   return stripReasoning(res.choices[0]?.message?.content ?? '');
 }
+
+/** Streams the reply: onDelta gets each piece as it arrives. Resolves to the full text, reasoning removed. */
+export async function chatStream(
+  messages: ChatMessage[],
+  opts: { model: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxRetries?: number },
+  onDelta: (text: string) => void,
+): Promise<string> {
+  const extra = process.env.NEBIUS_DISABLE_THINKING === '1'
+    ? { chat_template_kwargs: { enable_thinking: false } }
+    : {};
+  // One budget for the whole reply, not just for the first byte.
+  const signal = AbortSignal.timeout(opts.timeoutMs ?? 20_000);
+  const stream = await getClient().chat.completions.create(
+    {
+      model: opts.model,
+      messages,
+      max_tokens: opts.maxTokens ?? 400,
+      temperature: opts.temperature ?? 0.4,
+      stream: true,
+      ...extra,
+    } as OpenAI.Chat.ChatCompletionCreateParamsStreaming,
+    { signal, ...(opts.maxRetries !== undefined ? { maxRetries: opts.maxRetries } : {}) },
+  );
+  let full = '';
+  for await (const chunk of stream) {
+    const piece = chunk.choices[0]?.delta?.content;
+    if (piece) {
+      full += piece;
+      onDelta(piece);
+    }
+  }
+  return stripReasoning(full);
+}

@@ -80,20 +80,42 @@ const FATAL = ['not-allowed', 'service-not-allowed', 'audio-capture', 'language-
  */
 export function createListener(
   Ctor: new () => SpeechRecognitionLike,
-  o: { lang: string; onText: (text: string) => void; onState: (s: ListenerState) => void; restartDelayMs?: number },
+  o: {
+    lang: string; onText: (text: string) => void; onState: (s: ListenerState) => void; restartDelayMs?: number;
+    /** Words as they are being spoken, for live captions. */
+    onInterim?: (text: string) => void;
+    /** Treat speech as finished once the live words stop changing for this long (0 = wait for the browser). */
+    settleMs?: number;
+  },
 ) {
   const rec = new Ctor();
   rec.lang = o.lang;
   rec.continuous = true;
-  rec.interimResults = false;
+  rec.interimResults = true;
   rec.maxAlternatives = 1;
   let wanted = false, paused = false, fatal = false, active = false, delay = o.restartDelayMs ?? 300;
+
+  // Browsers wait a second or more of silence before calling a phrase final. Live words that stop
+  // changing for settleMs are taken as finished, and the browser's late final for them is skipped.
+  let settle: ReturnType<typeof setTimeout> | null = null;
+  const early = new Set<number>(); // result indexes already sent early, this session
+  const clearSettle = () => { if (settle) { clearTimeout(settle); settle = null; } };
 
   rec.onresult = (e) => {
     for (let i = e.resultIndex ?? 0; i < e.results.length; i++) {
       const r = e.results[i];
       const text = r?.[0]?.transcript?.trim();
-      if (r && r.isFinal !== false && text) o.onText(text);
+      if (!r || !text) continue;
+      if (r.isFinal !== false) {
+        clearSettle();
+        if (!early.delete(i)) o.onText(text);
+      } else if (!early.has(i)) {
+        o.onInterim?.(text);
+        clearSettle();
+        if (o.settleMs) {
+          settle = setTimeout(() => { settle = null; early.add(i); o.onText(text); }, o.settleMs);
+        }
+      }
     }
   };
   rec.onerror = (e) => {
@@ -102,6 +124,8 @@ export function createListener(
   };
   rec.onend = () => {
     active = false;
+    clearSettle();
+    early.clear(); // result indexes start again in the next session
     if (wanted && !paused && !fatal) setTimeout(begin, delay);
   };
 
@@ -116,7 +140,7 @@ export function createListener(
       setTimeout(begin, 1000); // still shutting down from the last session
     }
   }
-  const halt = () => { if (active) (rec.abort ?? rec.stop).call(rec); };
+  const halt = () => { clearSettle(); if (active) (rec.abort ?? rec.stop).call(rec); };
 
   return {
     start() { wanted = true; begin(); },

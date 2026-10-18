@@ -271,4 +271,26 @@ describe('handleTalk', () => {
       expect(messages[0].content).toContain('TELL_FAMILY:');
     });
   });
+  describe('streaming', () => {
+    it('forwards the model words as they arrive and still processes the full reply', async () => {
+      const parts = ['I will let ', 'Priya know.', '\nTELL_FAMILY: Kamla misses Rohan.', '\nMOOD: calm'];
+      const chatStream = vi.fn(async (_m: unknown, _o: unknown, onDelta: (d: string) => void) => {
+        for (const p of parts) onDelta(p);
+        return parts.join('');
+      });
+      const { deps, alerts, chat } = makeDeps({ chatStream });
+      const seen: string[] = [];
+      const r = await handleTalk(deps, { householdId: 'h1', text: 'Tell Priya', onDelta: (d) => seen.push(d) });
+      expect(seen).toEqual(parts);
+      expect(chat).not.toHaveBeenCalled();
+      expect(r.body.reply).toBe('I will let Priya know.');
+      expect(alerts).toContainEqual({ reason: 'message', detail: 'Kamla misses Rohan.' });
+    });
+
+    it('falls back as usual when the stream fails', async () => {
+      const { deps } = makeDeps({ chatStream: async () => { throw new Error('503'); } });
+      const r = await handleTalk(deps, { householdId: 'h1', text: 'Hello', onDelta: () => {} });
+      expect(r.body.reply).toMatch(/^I'm right here/);
+    });
+  });
 });

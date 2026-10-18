@@ -111,3 +111,35 @@ describe('speakAsync', () => {
     }
   });
 });
+
+describe('createListener: live words and early finish', () => {
+  it('shows words live and finishes once they stop changing, without waiting for the browser', async () => {
+    FakeRec.all = [];
+    const heard: string[] = [];
+    const live: string[] = [];
+    const l = createListener(FakeRec, { lang: 'en-IN', onText: (t) => heard.push(t), onInterim: (t) => live.push(t), onState: () => {}, restartDelayMs: 0, settleMs: 30 });
+    l.start();
+    const rec = FakeRec.all[0];
+    expect(rec.interimResults).toBe(true);
+    rec.say('Remi what', false);
+    rec.say('Remi what day is it', false);
+    expect(live).toEqual(['Remi what', 'Remi what day is it']);
+    expect(heard).toEqual([]);
+    await wait(60);
+    expect(heard).toEqual(['Remi what day is it']);
+    rec.say('Remi what day is it', true); // the browser's own final arrives late: not a second turn
+    expect(heard).toEqual(['Remi what day is it']);
+  });
+
+  it('uses the browser final when it comes first', async () => {
+    FakeRec.all = [];
+    const heard: string[] = [];
+    const l = createListener(FakeRec, { lang: 'en-IN', onText: (t) => heard.push(t), onState: () => {}, restartDelayMs: 0, settleMs: 30 });
+    l.start();
+    const rec = FakeRec.all[0];
+    rec.say('hello', false);
+    rec.say('hello Remi', true);
+    await wait(60);
+    expect(heard).toEqual(['hello Remi']);
+  });
+});

@@ -25,6 +25,8 @@ export interface CoreDeps {
   /** Atomically takes one token from a fixed window; false when the window is full. */
   takeRateToken(householdId: string, bucket: string, limit: number, windowSeconds: number): Promise<boolean>;
   chat(messages: ChatMessage[], opts: { maxTokens: number; temperature: number }): Promise<string>;
+  /** Same as chat, but calls onDelta with each piece of text as it arrives; resolves to the full text. */
+  chatStream?(messages: ChatMessage[], opts: { maxTokens: number; temperature: number }, onDelta: (text: string) => void): Promise<string>;
   logEvent(householdId: string, type: string, payload: Record<string, unknown>): Promise<void>;
   alert(householdId: string, reason: AlertReason, detail: string): Promise<void>;
   faceGallery(householdId: string): Promise<FaceSample[]>;
@@ -32,11 +34,18 @@ export interface CoreDeps {
 
 export type TalkMode = 'addressed' | 'followup' | 'overheard';
 
-export async function handleTalk(deps: CoreDeps, input: { householdId: string; text: string; clientKey?: string; mode?: TalkMode }) {
+export async function handleTalk(deps: CoreDeps, input: {
+  householdId: string; text: string; clientKey?: string; mode?: TalkMode;
+  /** Stream the model's words to the tablet so Remi can start speaking after the first sentence. */
+  onDelta?: (text: string) => void;
+}) {
   const text = input.text.trim().slice(0, MAX_INPUT);
   if (!text) return { status: 400, body: { error: 'empty' } };
   const now = deps.now();
   const { householdId } = input;
+  // Independent reads go out together: every round-trip here is time before Remi can speak.
+  const historyP = deps.recentTurns(householdId, new Date(now.getTime() - 30 * 60_000));
+  historyP.catch(() => {}); // awaited later; never an unhandled rejection if we return early
   const ctx = await deps.loadContext(householdId, now);
   const h = ctx.household;
   // People with dementia often go back to their first language: answer Hindi in Hindi, whatever the household default.
@@ -59,8 +68,11 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
     if (!(await deps.takeRateToken(householdId, 'join-in', 1, JOIN_IN_COOLDOWN_SECONDS))) return silent;
   }
 
-  const allowed = (await deps.takeRateToken(householdId, 'talk', RATE_PER_MIN, 60))
-    && (!input.clientKey || (await deps.takeRateToken(householdId, `talk-client:${input.clientKey}`, CLIENT_RATE_PER_MIN, 60)));
+  const [householdOk, clientOk] = await Promise.all([
+    deps.takeRateToken(householdId, 'talk', RATE_PER_MIN, 60),
+    input.clientKey ? deps.takeRateToken(householdId, `talk-client:${input.clientKey}`, CLIENT_RATE_PER_MIN, 60) : true,
+  ]);
+  const allowed = householdOk && clientOk;
   if (!allowed) {
     await Promise.allSettled(alerts);
     const busyReply = safety.length ? helpSentMessage(language, h.primaryContactName) : maySkip ? null : fallbackReply(language);
@@ -78,7 +90,7 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
     routine: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
     primaryContactName: h.primaryContactName, sensitive, safety, heardAs: input.mode === 'addressed' ? undefined : input.mode,
   });
-  const history = (await deps.recentTurns(householdId, new Date(now.getTime() - 30 * 60_000))).slice(-6);
+  const history = (await historyP).slice(-6);
   const messages: ChatMessage[] = [
     { role: 'system', content: system },
     // Earlier replies keep their MOOD line: without it the model copies the history and stops writing one.
@@ -95,7 +107,11 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
   let fallback = false;
   let toldFamily: string | null = null;
   try {
-    ({ reply, mood } = parseMoodTag(await deps.chat(messages, { maxTokens: 300, temperature: 0.3 })));
+    const opts = { maxTokens: 300, temperature: 0.3 };
+    const raw = input.onDelta && deps.chatStream
+      ? await deps.chatStream(messages, opts, input.onDelta)
+      : await deps.chat(messages, opts);
+    ({ reply, mood } = parseMoodTag(raw));
     const told = extractTellFamily(reply);
     reply = told.reply;
     if (!reply) throw new Error('empty reply');

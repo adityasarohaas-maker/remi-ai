@@ -34,3 +34,13 @@ describe('extractTellFamily', () => {
     expect(extractTellFamily('Hello.\nTELL_FAMILY:   ')).toEqual({ reply: 'Hello.', message: null });
   });
 });
+
+describe('hidden lines written inline', () => {
+  it('finds the mood at the end of the last sentence', () => {
+    expect(parseMoodTag('क्या आप बताना चाहेंगी? MOOD: calm')).toEqual({ reply: 'क्या आप बताना चाहेंगी?', mood: 'calm' });
+  });
+  it('finds the family message after the spoken sentence', () => {
+    expect(extractTellFamily('I will let Priya know. TELL_FAMILY: Kamla misses Rohan.'))
+      .toEqual({ reply: 'I will let Priya know.', message: 'Kamla misses Rohan.' });
+  });
+});

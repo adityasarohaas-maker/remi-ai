@@ -1,6 +1,6 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { chatText, MODELS } from '@/lib/nebius';
+import { chatText, chatStream, MODELS } from '@/lib/nebius';
 import { sendAlert } from '@/lib/alerts';
 import { localParts, dayRangeUtc, safeTimeZone } from '@/core/time';
 import type { CoreDeps } from '@/core/talk';
@@ -61,6 +61,7 @@ export function supabaseDeps(): CoreDeps {
 
     // Live replies: one attempt, short budget — the patient gets the calm fallback instead of a long wait.
     chat: (messages, opts) => chatText(messages, { model: MODELS.chat(), timeoutMs: 15_000, maxRetries: 0, ...opts }),
+    chatStream: (messages, opts, onDelta) => chatStream(messages, { model: MODELS.chat(), timeoutMs: 15_000, maxRetries: 0, ...opts }, onDelta),
 
     async logEvent(householdId, type, payload) {
       const { error } = await db.from('events').insert({ household_id: householdId, type, payload });
