@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
+// Every page is per-family and request-time (cookies, device tokens), so the
+// classic dynamic rendering model fits better than Cache Components here.
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
