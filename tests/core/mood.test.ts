@@ -23,8 +23,8 @@ import { extractTellFamily } from '@/core/mood';
 
 describe('extractTellFamily', () => {
   it('takes the message for the family out of the spoken reply', () => {
-    expect(extractTellFamily('Of course. I will let Priya know.\nTELL_FAMILY: Kamla would like Rohan to call her.'))
-      .toEqual({ reply: 'Of course. I will let Priya know.', message: 'Kamla would like Rohan to call her.' });
+    expect(extractTellFamily('Of course. I will let Priya know.\nTELL_FAMILY: Avni would like Rohan to call her.'))
+      .toEqual({ reply: 'Of course. I will let Priya know.', message: 'Avni would like Rohan to call her.' });
   });
   it('accepts brackets and lower case', () => {
     expect(extractTellFamily('Okay.\n[tell_family: She misses Rohan]')).toEqual({ reply: 'Okay.', message: 'She misses Rohan' });
@@ -40,7 +40,7 @@ describe('hidden lines written inline', () => {
     expect(parseMoodTag('क्या आप बताना चाहेंगी? MOOD: calm')).toEqual({ reply: 'क्या आप बताना चाहेंगी?', mood: 'calm' });
   });
   it('finds the family message after the spoken sentence', () => {
-    expect(extractTellFamily('I will let Priya know. TELL_FAMILY: Kamla misses Rohan.'))
-      .toEqual({ reply: 'I will let Priya know.', message: 'Kamla misses Rohan.' });
+    expect(extractTellFamily('I will let Priya know. TELL_FAMILY: Avni misses Rohan.'))
+      .toEqual({ reply: 'I will let Priya know.', message: 'Avni misses Rohan.' });
   });
 });

@@ -3,11 +3,11 @@ import { speakableText, takeSentences } from '@/core/stream-speech';
 
 describe('speakableText', () => {
   it('passes plain text through', () => {
-    expect(speakableText('Hello Kamla. How are you', false)).toBe('Hello Kamla. How are you');
+    expect(speakableText('Hello Avni. How are you', false)).toBe('Hello Avni. How are you');
   });
 
   it('never lets the hidden lines through, even half-written', () => {
-    expect(speakableText('I will let Priya know.\nTELL_FAMILY: Kamla misses Rohan.\nMOOD: calm', true)).toBe('I will let Priya know.');
+    expect(speakableText('I will let Priya know.\nTELL_FAMILY: Avni misses Rohan.\nMOOD: calm', true)).toBe('I will let Priya know.');
     expect(speakableText('I will let Priya know.\nTELL_FA', false)).toBe('I will let Priya know.');
     expect(speakableText('Okay.\n[mood: ha', false)).toBe('Okay.');
     expect(speakableText('Okay.\nM', false)).toBe('Okay.');
@@ -33,12 +33,12 @@ describe('speakableText', () => {
 
 describe('takeSentences', () => {
   it('returns only finished sentences while text is still arriving', () => {
-    expect(takeSentences('Hello Kamla. How are y', 0, false)).toEqual({ sentences: ['Hello Kamla.'], upTo: 13 });
+    expect(takeSentences('Hello Avni. How are y', 0, false)).toEqual({ sentences: ['Hello Avni.'], upTo: 12 });
   });
 
   it('continues from where it stopped', () => {
-    const text = 'Hello Kamla. How are you? I am here';
-    expect(takeSentences(text, 13, false)).toEqual({ sentences: ['How are you?'], upTo: 26 });
+    const text = 'Hello Avni. How are you? I am here';
+    expect(takeSentences(text, 12, false)).toEqual({ sentences: ['How are you?'], upTo: 25 });
   });
 
   it('waits for the space after the stop, so "Dr." or "3.5" mid-word are not cut early', () => {
@@ -46,7 +46,7 @@ describe('takeSentences', () => {
   });
 
   it('speaks Hindi sentences ending in a danda', () => {
-    expect(takeSentences('नमस्ते कमला। आप कैसी', 0, false).sentences).toEqual(['नमस्ते कमला।']);
+    expect(takeSentences('नमस्ते अवनि। आप कैसी', 0, false).sentences).toEqual(['नमस्ते अवनि।']);
   });
 
   it('flushes the rest when the reply is complete', () => {
@@ -58,6 +58,6 @@ describe('takeSentences', () => {
 describe('speakableText with inline hidden lines', () => {
   it('stops at a hidden tag written on the same line', () => {
     expect(speakableText('Hello there. MOOD: calm', true)).toBe('Hello there.');
-    expect(speakableText('I will let Priya know. TELL_FAMILY: Kamla misses Rohan. More', false)).toBe('I will let Priya know.');
+    expect(speakableText('I will let Priya know. TELL_FAMILY: Avni misses Rohan. More', false)).toBe('I will let Priya know.');
   });
 });

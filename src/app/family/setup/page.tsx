@@ -13,7 +13,7 @@ export default async function SetupPage() {
       <h1 className="text-3xl font-semibold">Who are we caring for?</h1>
       <form action={createHousehold} className="mt-8 space-y-4">
         <label className="block">Full name<input name="patient_name" required className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
-        <label className="block">What they like to be called<input name="preferred_name" placeholder="e.g. Kamla, Nani" className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
+        <label className="block">What they like to be called<input name="preferred_name" placeholder="e.g. Avni, Nani" className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
         <label className="block">Language
           <select name="language" className="mt-1 w-full rounded-lg border px-4 py-3">
             <option value="en-IN">English</option>

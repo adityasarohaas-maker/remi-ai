@@ -31,7 +31,7 @@ export async function seedDemo(): Promise<void> {
 
   // household with a stable id, so storage paths survive resets
   const { error: hErr } = await db.from('households').upsert({
-    id: DEMO_HOUSEHOLD_ID, patient_name: 'Kamla Devi', preferred_name: 'Kamla', language: 'en-IN', timezone: TZ,
+    id: DEMO_HOUSEHOLD_ID, patient_name: 'Avni Devi', preferred_name: 'Avni', language: 'en-IN', timezone: TZ,
     about: 'Retired Hindi teacher from Jaipur, 78. Loves old Lata Mangeshkar songs, her rose garden and making rajma on Sundays. Lives with her daughter Priya.',
     home_address: 'B-14, Shanti Nagar, Jaipur', primary_contact_name: 'Priya', primary_contact_phone: '+91 98xxxxxx10', telegram_chat_id: null,
   });
@@ -46,18 +46,18 @@ export async function seedDemo(): Promise<void> {
 
   const { data: people, error: pErr } = await db.from('people').insert([
     { household_id: DEMO_HOUSEHOLD_ID, name: 'Rohan', relation: 'grandson', notes: 'Plays cricket for his college team. Ask him about his last match.', is_deceased: false },
-    { household_id: DEMO_HOUSEHOLD_ID, name: 'Priya', relation: 'daughter', notes: "Lives with Kamla. Works as a nurse. Loves her mother's rajma.", is_deceased: false },
+    { household_id: DEMO_HOUSEHOLD_ID, name: 'Priya', relation: 'daughter', notes: "Lives with Avni. Works as a nurse. Loves her mother's rajma.", is_deceased: false },
     { household_id: DEMO_HOUSEHOLD_ID, name: 'Ramesh', relation: 'husband', notes: 'Married 52 years. Loved Sunday walks to the temple.', is_deceased: true },
   ]).select('id, name');
   if (pErr || !people) throw pErr ?? new Error('people insert failed');
   const id = (name: string) => people.find((p) => p.name === name)!.id;
 
   await db.from('routine_items').insert([
-    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '08:00', kind: 'medicine', label: 'Morning tablet', spoken_message: 'Kamla, it is time for your morning tablet, with a glass of water.' },
-    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '08:30', kind: 'meal', label: 'Breakfast', spoken_message: 'Breakfast is ready, Kamla. Poha today.' },
-    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '13:00', kind: 'meal', label: 'Lunch', spoken_message: 'It is lunch time, Kamla.' },
+    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '08:00', kind: 'medicine', label: 'Morning tablet', spoken_message: 'Avni, it is time for your morning tablet, with a glass of water.' },
+    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '08:30', kind: 'meal', label: 'Breakfast', spoken_message: 'Breakfast is ready, Avni. Poha today.' },
+    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '13:00', kind: 'meal', label: 'Lunch', spoken_message: 'It is lunch time, Avni.' },
     { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '17:00', kind: 'activity', label: 'Water the roses', spoken_message: 'Shall we water the roses together?' },
-    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '20:00', kind: 'medicine', label: 'Night tablet', spoken_message: 'Kamla, it is time for your night tablet.' },
+    { household_id: DEMO_HOUSEHOLD_ID, time_of_day: '20:00', kind: 'medicine', label: 'Night tablet', spoken_message: 'Avni, it is time for your night tablet.' },
   ]);
 
   await db.from('sensitive_guidance').insert([
@@ -82,9 +82,9 @@ export async function seedDemo(): Promise<void> {
   const [t1, t2, t3, t4] = demoMorningTimes(new Date(), TZ, [500, 550, 585, 615]);
   await db.from('events').insert([
     { household_id: DEMO_HOUSEHOLD_ID, type: 'conversation', created_at: t1.toISOString(),
-      payload: { text: 'What day is it?', reply: 'It is a lovely day, Kamla. The roses are out.', mood: 'calm', fallback: false } },
+      payload: { text: 'What day is it?', reply: 'It is a lovely day, Avni. The roses are out.', mood: 'calm', fallback: false } },
     { household_id: DEMO_HOUSEHOLD_ID, type: 'conversation', created_at: t2.toISOString(),
-      payload: { text: 'What day is it?', reply: 'It is a lovely day, Kamla. Shall we look at the roses?', mood: 'confused', fallback: false } },
+      payload: { text: 'What day is it?', reply: 'It is a lovely day, Avni. Shall we look at the roses?', mood: 'confused', fallback: false } },
     { household_id: DEMO_HOUSEHOLD_ID, type: 'conversation', created_at: t3.toISOString(),
       payload: { text: 'Where is Ramesh?', reply: 'Ramesh loved your Sunday walks to the temple. He always said your rajma was the best in Jaipur.', mood: 'sad', sensitiveTopic: 'Her husband Ramesh', fallback: false } },
     { household_id: DEMO_HOUSEHOLD_ID, type: 'face_query', created_at: t4.toISOString(), payload: { status: 'match', name: 'Rohan' } },

@@ -9,7 +9,7 @@ export default async function RoutinePage() {
     sb.from('routine_items').select('id, time_of_day, kind, label, spoken_message').eq('household_id', householdId).order('time_of_day'),
     sb.from('households').select('preferred_name').eq('id', householdId).single(),
   ]);
-  const name = h?.preferred_name ?? 'Kamla';
+  const name = h?.preferred_name ?? 'Avni';
   return (
     <section>
       <h1 className="text-2xl font-semibold">Daily routine</h1>

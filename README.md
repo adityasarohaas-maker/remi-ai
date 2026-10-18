@@ -17,9 +17,9 @@ All model calls go through Nebius Token Factory's OpenAI-compatible API (`https:
 
 ## Try it
 
-The hosted demo opens a demo family (Kamla, 78, from Jaipur) that resets every day:
+The hosted demo opens a demo family (Avni, 78, from Jaipur) that resets every day:
 
-- **Open Kamla's tablet** and tap **Start Remi** once. Then just talk: "Remi, what day is it?", "Remi, where is my husband?", "Remi, who is this?" (Chrome or Edge on a laptop or Android tablet; other browsers get the buttons and a text box.) Add `?quiet=1` to the tablet link to hear Remi check in after one quiet minute.
+- **Open Avni's tablet** and tap **Start Remi** once. Then just talk: "Remi, what day is it?", "Remi, where is my husband?", "Remi, who is this?" (Chrome or Edge on a laptop or Android tablet; other browsers get the buttons and a text box.) Add `?quiet=1` to the tablet link to hear Remi check in after one quiet minute.
 - **Open the family portal** — see the people, routine and hard-question guidance the family wrote, the alerts, the conversation log, and ask Remi to write today's evening note.
 
 ## Hands-free Remi

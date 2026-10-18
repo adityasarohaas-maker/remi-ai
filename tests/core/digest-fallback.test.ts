@@ -16,7 +16,7 @@ describe('factsNote', () => {
       missedMedicines: [],
       alerts: [{ time: '10:05 am', reason: 'help_button', detail: 'Pressed help' }],
     };
-    const note = factsNote('Kamla', facts);
+    const note = factsNote('Avni', facts);
     for (const h of ['How the day went', 'Questions asked most', 'Medicines and meals', 'Anything to watch']) expect(note).toContain(h);
     expect(note).toContain('3 times');
     expect(note).toContain('mostly calm');
@@ -27,8 +27,8 @@ describe('factsNote', () => {
   });
 
   it('says plainly when there is little data', () => {
-    const note = factsNote('Kamla', summarizeDay('2026-10-17', [], [], 'Asia/Kolkata'));
-    expect(note).toContain('Kamla did not talk to Remi today.');
+    const note = factsNote('Avni', summarizeDay('2026-10-17', [], [], 'Asia/Kolkata'));
+    expect(note).toContain('Avni did not talk to Remi today.');
     expect(note).toContain('Nothing to watch today.');
   });
 });

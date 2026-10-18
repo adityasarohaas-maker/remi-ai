@@ -4,7 +4,7 @@ import type { CoreDeps } from '@/core/talk';
 import type { HouseholdContext } from '@/core/types';
 
 const ctx: HouseholdContext = {
-  household: { id: 'h1', patientName: 'Kamla Devi', preferredName: 'Kamla', language: 'en-IN', timezone: 'Asia/Kolkata', about: null, homeAddress: null, primaryContactName: 'Priya', primaryContactPhone: null },
+  household: { id: 'h1', patientName: 'Avni Devi', preferredName: 'Avni', language: 'en-IN', timezone: 'Asia/Kolkata', about: null, homeAddress: null, primaryContactName: 'Priya', primaryContactPhone: null },
   people: [{ id: 'p2', name: 'Ramesh', relation: 'husband', notes: null, isDeceased: true }],
   routine: [], doneIds: [],
   guidance: [
@@ -40,10 +40,10 @@ describe('handleTalk', () => {
   });
 
   it('keeps the mood line on earlier replies so the model keeps writing it', async () => {
-    const { deps, chat } = makeDeps({ recentTurns: async () => [{ text: 'Hello', reply: 'Hello Kamla.', mood: 'happy' }, { text: 'Hi', reply: 'Hi.', mood: 'unknown' }] });
+    const { deps, chat } = makeDeps({ recentTurns: async () => [{ text: 'Hello', reply: 'Hello Avni.', mood: 'happy' }, { text: 'Hi', reply: 'Hi.', mood: 'unknown' }] });
     await handleTalk(deps, { householdId: 'h1', text: 'And what time?' });
     const messages = (chat.mock.calls[0] as unknown[])[0] as { role: string; content: string }[];
-    expect(messages[2].content).toBe('Hello Kamla.\nMOOD: happy');
+    expect(messages[2].content).toBe('Hello Avni.\nMOOD: happy');
     expect(messages[4].content).toBe('Hi.');
   });
 
@@ -247,14 +247,14 @@ describe('handleTalk', () => {
     expect(messages.at(-1)!.content).toBe('Hello');
   });
   describe('telling the family', () => {
-    const replyWithMessage = 'I will let Priya know.\nTELL_FAMILY: Kamla would like to talk to Rohan.\nMOOD: calm';
+    const replyWithMessage = 'I will let Priya know.\nTELL_FAMILY: Avni would like to talk to Rohan.\nMOOD: calm';
 
     it('sends the message to the family and keeps it out of what Remi says', async () => {
       const { deps, alerts, logged } = makeDeps({ chat: async () => replyWithMessage });
       const r = await handleTalk(deps, { householdId: 'h1', text: 'Yes, please tell her' });
       expect(r.body.reply).toBe('I will let Priya know.');
-      expect(alerts).toContainEqual({ reason: 'message', detail: 'Kamla would like to talk to Rohan.' });
-      expect(logged[0].payload).toMatchObject({ toldFamily: 'Kamla would like to talk to Rohan.' });
+      expect(alerts).toContainEqual({ reason: 'message', detail: 'Avni would like to talk to Rohan.' });
+      expect(logged[0].payload).toMatchObject({ toldFamily: 'Avni would like to talk to Rohan.' });
     });
 
     it('limits how often messages go out, but still answers', async () => {
@@ -273,7 +273,7 @@ describe('handleTalk', () => {
   });
   describe('streaming', () => {
     it('forwards the model words as they arrive and still processes the full reply', async () => {
-      const parts = ['I will let ', 'Priya know.', '\nTELL_FAMILY: Kamla misses Rohan.', '\nMOOD: calm'];
+      const parts = ['I will let ', 'Priya know.', '\nTELL_FAMILY: Avni misses Rohan.', '\nMOOD: calm'];
       const chatStream = vi.fn(async (_m: unknown, _o: unknown, onDelta: (d: string) => void) => {
         for (const p of parts) onDelta(p);
         return parts.join('');
@@ -284,7 +284,7 @@ describe('handleTalk', () => {
       expect(seen).toEqual(parts);
       expect(chat).not.toHaveBeenCalled();
       expect(r.body.reply).toBe('I will let Priya know.');
-      expect(alerts).toContainEqual({ reason: 'message', detail: 'Kamla misses Rohan.' });
+      expect(alerts).toContainEqual({ reason: 'message', detail: 'Avni misses Rohan.' });
     });
 
     it('falls back as usual when the stream fails', async () => {

@@ -75,14 +75,14 @@ describe('checkInLine', () => {
     { name: 'Ramesh', relation: 'husband', isDeceased: true },
   ];
   it('rotates warm lines and never invites talk about someone who has passed away', () => {
-    const lines = Array.from({ length: 8 }, (_, i) => checkInLine('en-IN', 'Kamla', people, i));
+    const lines = Array.from({ length: 8 }, (_, i) => checkInLine('en-IN', 'Avni', people, i));
     expect(new Set(lines).size).toBeGreaterThan(2);
     expect(lines.some((l) => l.includes('Rohan, your grandson'))).toBe(true);
-    expect(lines.every((l) => l.includes('Kamla'))).toBe(true);
+    expect(lines.every((l) => l.includes('Avni'))).toBe(true);
     expect(lines.some((l) => l.includes('Ramesh'))).toBe(false);
   });
   it('speaks Hindi for Hindi households', () => {
-    expect(checkInLine('hi-IN', 'Kamla', [], 0)).toMatch(/[ऀ-ॿ]/);
+    expect(checkInLine('hi-IN', 'Avni', [], 0)).toMatch(/[ऀ-ॿ]/);
   });
 });
 

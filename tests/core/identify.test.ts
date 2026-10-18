@@ -9,7 +9,7 @@ function deps(over: Partial<CoreDeps> = {}): CoreDeps {
   return {
     now: () => new Date('2026-10-17T07:40:00Z'),
     loadContext: async () => ({
-      household: { id: 'h1', patientName: 'Kamla Devi', preferredName: 'Kamla', language: 'en-IN', timezone: 'Asia/Kolkata', about: null, homeAddress: null, primaryContactName: 'Priya', primaryContactPhone: null },
+      household: { id: 'h1', patientName: 'Avni Devi', preferredName: 'Avni', language: 'en-IN', timezone: 'Asia/Kolkata', about: null, homeAddress: null, primaryContactName: 'Priya', primaryContactPhone: null },
       people: [{ id: 'rohan', name: 'Rohan', relation: 'grandson', notes: 'Loves cricket', isDeceased: false }],
       routine: [], doneIds: [], guidance: [],
     }),

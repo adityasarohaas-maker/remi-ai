@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildCompanionPrompt, buildRecognitionMessages } from '@/core/companion-prompt';
 
 const base = {
-  preferredName: 'Kamla', language: 'hi-IN', about: 'Retired teacher from Jaipur.',
+  preferredName: 'Avni', language: 'hi-IN', about: 'Retired teacher from Jaipur.',
   now: { weekday: 'Saturday', prettyDate: '17 October 2026', prettyTime: '1:10 pm', partOfDay: 'afternoon' as const },
   people: [
     { id: 'p1', name: 'Rohan', relation: 'grandson', notes: 'Loves cricket', isDeceased: false },
@@ -17,7 +17,7 @@ const base = {
 describe('buildCompanionPrompt', () => {
   it('includes name, language, time, people, routine and the mood instruction', () => {
     const p = buildCompanionPrompt(base);
-    expect(p).toContain('Kamla');
+    expect(p).toContain('Avni');
     expect(p).toContain('Usually reply in Hindi');
     expect(p).toContain('Saturday, 17 October 2026, 1:10 pm');
     expect(p).toContain('Rohan — grandson. Loves cricket');
@@ -26,8 +26,8 @@ describe('buildCompanionPrompt', () => {
     expect(p).toMatch(/MOOD:/);
     expect(p).toContain('Never pretend to be');
   });
-  it('answers in the language Kamla just used', () => {
-    expect(buildCompanionPrompt(base)).toContain('reply in the language Kamla used');
+  it('answers in the language Avni just used', () => {
+    expect(buildCompanionPrompt(base)).toContain('reply in the language Avni used');
   });
 
   it('only offers what Remi can really do, and never invents what family feel or plan', () => {
@@ -62,7 +62,7 @@ describe('buildCompanionPrompt', () => {
 
 describe('buildRecognitionMessages', () => {
   it('only uses the person facts and asks for 1–2 sentences', () => {
-    const m = buildRecognitionMessages({ preferredName: 'Kamla', language: 'en-IN', person: base.people[0] });
+    const m = buildRecognitionMessages({ preferredName: 'Avni', language: 'en-IN', person: base.people[0] });
     expect(m[0].role).toBe('system');
     expect(m[0].content).toContain('1–2 short');
     expect(m[1].content).toContain('Rohan');

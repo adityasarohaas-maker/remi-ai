@@ -9,7 +9,7 @@ const events = [
   ev('conversation', { text: 'When is lunch?', mood: 'calm' }, '2026-10-17T06:00:00Z'),
   ev('conversation', { text: 'Where is Ramesh?', mood: 'sad', sensitiveTopic: 'Husband Ramesh' }, '2026-10-17T13:00:00Z'), // 18:30
   ev('conversation', { text: 'I like the garden', mood: 'happy', fallback: true }, '2026-10-17T13:10:00Z'),
-  ev('alert', { reason: 'safety', detail: 'Kamla said: "I fell"' }, '2026-10-17T13:20:00Z'),
+  ev('alert', { reason: 'safety', detail: 'Avni said: "I fell"' }, '2026-10-17T13:20:00Z'),
   ev('face_query', { status: 'match', name: 'Rohan' }, '2026-10-17T07:00:00Z'),
   ev('face_query', { status: 'unsure' }, '2026-10-17T07:05:00Z'),
 ];

@@ -102,7 +102,7 @@ describe('speakAsync', () => {
     g.SpeechSynthesisUtterance = class { text: string; lang = ''; rate = 1; voice = null; onend?: () => void; onerror?: () => void; constructor(t: string) { this.text = t; } };
     g.window = { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (u: { text: string; onend?: () => void }) => spoken.push(u) } };
     try {
-      const done = speakAsync('Hello Kamla', 'en-IN');
+      const done = speakAsync('Hello Avni', 'en-IN');
       spoken[0].onend?.();
       await expect(done).resolves.toBeUndefined();
       await expect(speakAsync('never ends', 'en-IN', 20)).resolves.toBeUndefined();
@@ -153,7 +153,7 @@ describe('speakAsync word beats', () => {
     g.window = { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (u: U) => spoken.push(u) } };
     try {
       let beats = 0;
-      const done = speakAsync('Hello Kamla', 'en-IN', 1000, { onWord: () => beats++ });
+      const done = speakAsync('Hello Avni', 'en-IN', 1000, { onWord: () => beats++ });
       spoken[0].onboundary?.({ name: 'word' });
       spoken[0].onboundary?.({ name: 'sentence' });
       spoken[0].onboundary?.({ name: 'word' });

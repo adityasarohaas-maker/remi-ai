@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { startDemo } from './demo-actions';
 
 const MORNING = [
-  { time: '8:20 am', ask: 'What day is it?', answer: 'It’s Saturday, Kamla. The roses are out this morning.' },
+  { time: '8:20 am', ask: 'What day is it?', answer: 'It’s Saturday, Avni. The roses are out this morning.' },
   { time: '9:10 am', ask: 'What day is it?', answer: 'It’s Saturday. Priya is making poha for breakfast.' },
   { time: '10:05 am', ask: 'What day is it today?', answer: 'Saturday — a slow, sunny one. Shall we water the roses later?' },
 ];
@@ -39,7 +39,7 @@ export default function Landing() {
           <div className="mt-10 flex flex-wrap gap-4">
             {tabletToken && (
               <Link href={`/patient/${tabletToken}`} className="rounded-2xl bg-garden px-7 py-4 text-lg font-semibold text-paper hover:bg-garden-deep">
-                Open Kamla’s tablet
+                Open Avni’s tablet
               </Link>
             )}
             <form action={startDemo}>
@@ -57,7 +57,7 @@ export default function Landing() {
           {MORNING.map((m) => (
             <li key={m.time} className="border-b border-leaf py-5 first:pt-0 last:border-0 last:pb-0">
               <p className="text-sm tabular-nums text-ink/55">{m.time}</p>
-              <p className="mt-1 text-lg">Kamla: {m.ask}</p>
+              <p className="mt-1 text-lg">Avni: {m.ask}</p>
               <p className="mt-1 text-xl font-semibold text-garden-deep">{m.answer}</p>
             </li>
           ))}
