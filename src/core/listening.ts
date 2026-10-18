@@ -1,12 +1,13 @@
 import { isQuestion } from './text';
 
 // Hands-free Remi: the tablet hears everything, but only some of it is for Remi.
-export const FOLLOW_UP_MS = 10_000;               // after Remi speaks, the next thing said is a reply to Remi
+export const FOLLOW_UP_MS = 45_000;               // after Remi speaks, the conversation stays open this long
 export const CHECK_IN_AFTER_MS = 2 * 60 * 60_000; // quiet this long in the day → Remi says hello
-export const JOIN_IN_COOLDOWN_SECONDS = 180;      // Remi joins an overheard conversation at most this often
+export const JOIN_IN_COOLDOWN_SECONDS = 60;       // Remi joins an overheard conversation at most this often
 
 // Letters around the name mean it is part of another word ("premium"). \b would not work for Devanagari.
-const NAME = String.raw`(?<![\p{L}\p{M}])(?:remi|remy|rémi|rémy|reemi|रेमी|रेमि)(?![\p{L}\p{M}])`;
+// The spellings are how speech recognition actually writes "Remi" (seen live: "Rami").
+const NAME = String.raw`(?<![\p{L}\p{M}])(?:remi|remy|rémi|rémy|reemi|remmy|rami|ramy|rimi|rimmy|रेमी|रेमि|रमी|रामी)(?![\p{L}\p{M}])`;
 const GREETING = String.raw`(?:(?:hey|hi|hello|okay|ok|oh|अरे|हे|सुनो)\s+)?`;
 const WAKE = new RegExp(NAME, 'iu');
 const WAKE_ALL = new RegExp(GREETING + NAME, 'giu');

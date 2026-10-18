@@ -23,7 +23,13 @@ export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (o: unknown) => controller.enqueue(encoder.encode(JSON.stringify(o) + '\n'));
+      // The tablet may stop reading mid-reply (screen changed, page closed); then stop sending quietly.
+      // handleTalk still finishes, so the turn is saved and any alert still goes out.
+      let open = true;
+      const send = (o: unknown) => {
+        if (!open) return;
+        try { controller.enqueue(encoder.encode(JSON.stringify(o) + '\n')); } catch { open = false; }
+      };
       try {
         const result = await handleTalk(supabaseDeps(), { ...input, onDelta: (delta) => send({ delta }) });
         send({ done: true, status: result.status, ...result.body });
@@ -31,7 +37,7 @@ export async function POST(req: Request) {
         console.error('talk stream failed', e);
         send({ done: true, status: 500, reply: null });
       }
-      controller.close();
+      if (open) { try { controller.close(); } catch { /* the tablet already went away */ } }
     },
   });
   return new Response(stream, {

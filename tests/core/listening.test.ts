@@ -120,3 +120,23 @@ describe('voiceCommand', () => {
     expect(voiceCommand('what day is it')).toBeNull();
   });
 });
+
+describe('wake word as speech recognition writes it (seen live: "Hey, Rami.")', () => {
+  const at = { nowMs: 10_000_000, lastSpokeAtMs: 0 };
+  it('hears the common spellings of Remi', () => {
+    for (const s of ['Hey, Rami.', 'Remmy, what day is it?', 'Rimi what day is it', 'Ramy, hello', 'रमी आज क्या दिन है']) {
+      expect(classifyHeard(s, at).kind).not.toBe('overheard');
+    }
+  });
+  it('still ignores words that merely contain the sound', () => {
+    expect(classifyHeard('I need some salami', at).kind).toBe('overheard');
+    expect(classifyHeard('my friend Ramesh', at).kind).toBe('overheard');
+  });
+});
+
+describe('a conversation stays open', () => {
+  it('treats speech within 45 seconds of Remi talking as a possible reply', () => {
+    expect(FOLLOW_UP_MS).toBeGreaterThanOrEqual(45_000);
+    expect(classifyHeard('how are you doing', { nowMs: 30_000 + 1_000_000, lastSpokeAtMs: 1_000_000 }).kind).toBe('followup');
+  });
+});

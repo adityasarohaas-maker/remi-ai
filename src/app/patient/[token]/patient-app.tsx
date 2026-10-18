@@ -14,8 +14,8 @@ import { Today, type TodayData } from './screens/today';
 export type Api = (path: string, init?: RequestInit) => Promise<Response>;
 type Screen = 'home' | 'talk' | 'face' | 'today';
 
-export function PatientApp({ token, preferredName, language, people, theme }: {
-  token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night';
+export function PatientApp({ token, preferredName, language, people, theme, debug = false }: {
+  token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night'; debug?: boolean;
 }) {
   const t = labelsFor(language);
   const [screen, setScreen] = useState<Screen>('home');
@@ -105,6 +105,12 @@ export function PatientApp({ token, preferredName, language, people, theme }: {
       {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} kodi={kodi} />}
       {screen === 'talk' && <Talk api={api} language={language} back={() => go('home')} />}
       {screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} />}
+      {debug && (
+        <ol className="pointer-events-none fixed left-2 top-2 z-30 max-w-sm rounded-xl bg-black/75 p-2 font-mono text-[11px] leading-snug text-white">
+          <li className="opacity-70">Remi debug · status: {remi.status}</li>
+          {remi.trace.map((x, i) => <li key={i}>{x.at} “{x.heard}” → {x.outcome}</li>)}
+        </ol>
+      )}
       {screen === 'today' && <Today today={today} language={language} markDone={tapDone} back={() => go('home')} />}
     </div>
   );

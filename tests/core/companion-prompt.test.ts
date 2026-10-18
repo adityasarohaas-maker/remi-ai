@@ -49,6 +49,13 @@ describe('buildCompanionPrompt', () => {
     expect(check).toContain('You never promise what someone else will do.');
   });
 
+  it('talks like a warm friend, not a quiz or an assistant', () => {
+    const p = buildCompanionPrompt(base);
+    expect(p).toContain('like a warm friend sitting beside her');
+    expect(p).toContain('Do not end every reply with a question');
+    expect(p).toContain('Do not repeat her own facts back to her');
+  });
+
   it('injects the family script when a sensitive topic matched', () => {
     const p = buildCompanionPrompt({ ...base, sensitive: { id: 'g', topic: 'Husband Ramesh', triggerWords: [], approach: 'share_memory', familyScript: 'Ramesh loved your rajma.', callPersonName: null } });
     expect(p).toContain('Ramesh loved your rajma.');

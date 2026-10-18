@@ -36,6 +36,11 @@ export function useRemi(o: {
   const [emotion, setEmotion] = useState<KodiEmotion>('calm');
   const [cue, setCue] = useState<KodiCue>(null);
   const [idleLong, setIdleLong] = useState(false);
+  // ?debug=1 shows what Remi heard and what it decided: the evidence when it seems not to respond
+  const [trace, setTrace] = useState<{ at: string; heard: string; outcome: string }[]>([]);
+  const note = useCallback((heard: string, outcome: string) => setTrace((tr) => [
+    ...tr.slice(-7), { at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), heard, outcome },
+  ]), []);
   const gesture = useCallback((g: KodiGesture) => setCue({ gesture: g, key: Date.now() + Math.random() }), []);
   const feel = useCallback((i: { mood?: string; reply?: string; event?: KodiEvent }) => {
     const f = kodiFeeling(i);
@@ -148,6 +153,7 @@ export function useRemi(o: {
       setHeard(raw);
       await markDone(pending.id);
       feel({ event: 'reminder-done' });
+      note(raw, 'reminder done');
       await say(wellDoneMessage(language, preferredName));
       return;
     }
@@ -158,6 +164,7 @@ export function useRemi(o: {
       if (h.kind === 'followup' || h.kind === 'overheard') h = { kind: 'addressed', text: h.text };
     }
     if (h.kind === 'ignore') { idle(); return; }
+    note(raw, h.kind === 'wake' ? 'wake word' : `${h.kind}`);
     if (h.kind === 'wake') { setHeard(raw); gesture('hop'); await say(wakeReply(language, preferredName)); return; }
 
     if (h.kind === 'addressed' || h.kind === 'followup') {
@@ -165,6 +172,7 @@ export function useRemi(o: {
       if (command) {
         setHeard(h.text);
         go(command, { autoLook: command === 'face' });
+        note(h.text, `command: ${command}`);
         if (command === 'face') await say(t.looking2);
         if (command === 'today') await say(t.yourDay);
         return;
@@ -172,13 +180,14 @@ export function useRemi(o: {
     }
 
     // One question at a time; but a cry for help never waits.
-    if (busy.current && !detectSafetyWords(raw).length) return;
+    if (busy.current && !detectSafetyWords(raw).length) { note(raw, 'dropped: still answering'); return; }
     busy.current = true;
     const previous = { you: heard, remi: reply };
     if (h.kind === 'addressed') { setHeard(h.text); setReply(''); setStatus('thinking'); }
     try {
       const result = await converse(h.text, h.kind);
       const answer = result.text;
+      note(h.text, answer ? `replied (${h.kind})` : `stayed quiet (${h.kind})`);
       if (answer) {
         feel({ mood: result.mood, reply: answer });
         if (h.kind !== 'addressed') setHeard(h.text);
@@ -186,13 +195,14 @@ export function useRemi(o: {
       } else if (h.kind === 'addressed') {
         await say(t.retry);
       }
-    } catch {
+    } catch (e) {
+      note(h.text, `error: ${(e as Error).message}`);
       if (h.kind === 'addressed') await say(t.retry);
     } finally {
       busy.current = false;
       if (!speaking.current) idle();
     }
-  }, [say, converse, idle, t, heard, reply, feel, gesture]);
+  }, [say, converse, idle, t, heard, reply, feel, gesture, note]);
 
   const handleRef = useRef(handle);
   useEffect(() => { handleRef.current = handle; }, [handle]);
@@ -274,6 +284,6 @@ export function useRemi(o: {
   return {
     status, live, heard, reply, turns, start, say, announce, hold, listenNow,
     active: status !== 'off',
-    emotion, cue, idleLong, feel, gesture,
+    emotion, cue, idleLong, feel, gesture, trace,
   };
 }
