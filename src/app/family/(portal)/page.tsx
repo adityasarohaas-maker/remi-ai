@@ -1,5 +1,6 @@
 import { requireFamily } from '@/lib/household';
 import { localParts, safeTimeZone } from '@/core/time';
+import { noteBlocks } from '@/core/note-blocks';
 import { WriteNoteButton } from './write-note';
 
 const REASON: Record<string, string> = {
@@ -32,10 +33,15 @@ export default async function FamilyHome() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
-      <section>
+      <section className="order-2 lg:order-1">
         <h1 className="text-2xl font-semibold">Evening note</h1>
         {digest ? (
-          <article className="mt-3 whitespace-pre-wrap rounded-xl border bg-white p-5 leading-relaxed">{digest.summary}</article>
+          <article className="mt-3 max-w-prose rounded-xl border bg-white p-5 leading-relaxed">
+            {noteBlocks(digest.summary).map((b, i) =>
+              b.kind === 'heading' ? <h3 key={i} className="mt-4 font-semibold text-garden-deep first:mt-0">{b.text}</h3>
+              : b.kind === 'list' ? <ul key={i} className="mt-1 list-disc space-y-1 pl-5">{b.items.map((t, j) => <li key={j}>{t}</li>)}</ul>
+              : <p key={i} className="mt-1">{b.text}</p>)}
+          </article>
         ) : (
           <p className="mt-3 text-stone-600">No note yet today. Remi writes one every evening at 8 pm, or you can ask for it now.</p>
         )}
@@ -61,7 +67,7 @@ export default async function FamilyHome() {
         </ul>
       </section>
 
-      <aside>
+      <aside className="order-1 lg:order-2">
         <h2 className="text-xl font-semibold">Alerts</h2>
         <ul className="mt-3 space-y-2">
           {(alerts ?? []).map((a, i) => {

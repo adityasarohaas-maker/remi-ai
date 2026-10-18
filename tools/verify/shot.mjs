@@ -2,6 +2,8 @@
 // unlike `msedge --screenshot`, which can't make a window narrower than ~500px.
 //   node tools/verify/shot.mjs <outFile.png> <url> [width=1440] [height=900] [mobile=0] [settleMs=2500]
 //   Add FULL=1 to capture the whole page height.
+//   JS runs on the target after it settles (e.g. open a screen), then waits again.
+//   PREP_URL + PREP_JS run first in the same profile (e.g. click the demo sign-in button).
 import { spawn } from 'node:child_process';
 import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -29,8 +31,15 @@ try {
   ws.onmessage = (e) => { const m = JSON.parse(e.data); const p = pending.get(m.id); if (p) { pending.delete(m.id); m.error ? p.rej(new Error(m.error.message)) : p.res(m.result); } };
   await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: +w, height: +h, deviceScaleFactor: 1, mobile: mobile === '1' });
+  if (process.env.PREP_URL) {
+    await send('Page.navigate', { url: process.env.PREP_URL });
+    await sleep(+settle);
+    if (process.env.PREP_JS) await send('Runtime.evaluate', { expression: process.env.PREP_JS });
+    await sleep(+settle);
+  }
   await send('Page.navigate', { url });
   await sleep(+settle);
+  if (process.env.JS) { await send('Runtime.evaluate', { expression: process.env.JS }); await sleep(+settle); }
   const metrics = await send('Page.getLayoutMetrics');
   const overflow = metrics.cssContentSize.width > +w + 1;
   const clip = process.env.FULL ? { x: 0, y: 0, width: +w, height: Math.ceil(metrics.cssContentSize.height), scale: 1 } : undefined;
