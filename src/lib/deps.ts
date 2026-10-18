@@ -1,0 +1,70 @@
+import 'server-only';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { chatText, MODELS } from '@/lib/nebius';
+import { sendAlert } from '@/lib/alerts';
+import { localParts, dayRangeUtc } from '@/core/time';
+import type { CoreDeps } from '@/core/talk';
+import type { HouseholdContext, RoutineItem, Approach } from '@/core/types';
+
+export function supabaseDeps(): CoreDeps {
+  const db = supabaseAdmin();
+  return {
+    now: () => new Date(),
+
+    async loadContext(householdId, now): Promise<HouseholdContext> {
+      const [h, people, routine, guidance] = await Promise.all([
+        db.from('households').select('*').eq('id', householdId).single(),
+        db.from('people').select('id, name, relation, notes, is_deceased').eq('household_id', householdId).order('created_at'),
+        db.from('routine_items').select('id, time_of_day, kind, label, spoken_message').eq('household_id', householdId).eq('active', true),
+        db.from('sensitive_guidance').select('id, topic, trigger_words, approach, family_script, caller:people(name)').eq('household_id', householdId),
+      ]);
+      if (h.error) throw h.error;
+      const tz = h.data.timezone as string;
+      const { start, end } = dayRangeUtc(localParts(now, tz).day, tz);
+      const done = await db.from('events').select('payload').eq('household_id', householdId).eq('type', 'reminder_done')
+        .gte('created_at', start.toISOString()).lt('created_at', end.toISOString());
+      return {
+        household: {
+          id: h.data.id, patientName: h.data.patient_name, preferredName: h.data.preferred_name,
+          language: h.data.language, timezone: tz, about: h.data.about, homeAddress: h.data.home_address,
+          primaryContactName: h.data.primary_contact_name, primaryContactPhone: h.data.primary_contact_phone,
+        },
+        people: (people.data ?? []).map((p) => ({ id: p.id, name: p.name, relation: p.relation, notes: p.notes, isDeceased: p.is_deceased })),
+        routine: (routine.data ?? []).map((r) => ({
+          id: r.id, timeOfDay: r.time_of_day, kind: r.kind as RoutineItem['kind'], label: r.label, spokenMessage: r.spoken_message,
+        })),
+        doneIds: (done.data ?? []).map((e) => (e.payload as { routineItemId: string }).routineItemId),
+        guidance: (guidance.data ?? []).map((g) => ({
+          id: g.id, topic: g.topic, triggerWords: g.trigger_words, approach: g.approach as Approach, familyScript: g.family_script,
+          callPersonName: (g.caller as unknown as { name: string } | null)?.name ?? null,
+        })),
+      };
+    },
+
+    async recentTurns(householdId, since) {
+      const { data } = await db.from('events').select('payload').eq('household_id', householdId).eq('type', 'conversation')
+        .gte('created_at', since.toISOString()).order('created_at', { ascending: true }).limit(20);
+      return (data ?? []).map((e) => e.payload as { text: string; reply: string });
+    },
+
+    async countRecentEvents(householdId, type, since) {
+      const { count } = await db.from('events').select('id', { count: 'exact', head: true })
+        .eq('household_id', householdId).eq('type', type).gte('created_at', since.toISOString());
+      return count ?? 0;
+    },
+
+    chat: (messages, opts) => chatText(messages, { model: MODELS.chat(), ...opts }),
+
+    async logEvent(householdId, type, payload) {
+      const { error } = await db.from('events').insert({ household_id: householdId, type, payload });
+      if (error) console.error('logEvent failed', error);
+    },
+
+    alert: sendAlert,
+
+    async faceGallery(householdId) {
+      const { data } = await db.from('face_embeddings').select('person_id, embedding').eq('household_id', householdId);
+      return (data ?? []).map((r) => ({ personId: r.person_id, embedding: r.embedding as number[] }));
+    },
+  };
+}
