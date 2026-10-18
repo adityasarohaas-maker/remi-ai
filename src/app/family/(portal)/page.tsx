@@ -7,6 +7,7 @@ const REASON: Record<string, string> = {
   safety: 'Safety words heard',
   call_request: 'Asked for a call',
   help_button: 'Pressed “I need help”',
+  message: 'A message from Remi',
 };
 
 const MOOD_STYLE: Record<string, string> = {

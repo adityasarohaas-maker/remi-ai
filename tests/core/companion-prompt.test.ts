@@ -18,7 +18,7 @@ describe('buildCompanionPrompt', () => {
   it('includes name, language, time, people, routine and the mood instruction', () => {
     const p = buildCompanionPrompt(base);
     expect(p).toContain('Kamla');
-    expect(p).toContain('Reply in Hindi');
+    expect(p).toContain('Usually reply in Hindi');
     expect(p).toContain('Saturday, 17 October 2026, 1:10 pm');
     expect(p).toContain('Rohan — grandson. Loves cricket');
     expect(p).toContain('Ramesh — husband (has passed away');
@@ -26,6 +26,29 @@ describe('buildCompanionPrompt', () => {
     expect(p).toMatch(/MOOD:/);
     expect(p).toContain('Never pretend to be');
   });
+  it('answers in the language Kamla just used', () => {
+    expect(buildCompanionPrompt(base)).toContain('reply in the language Kamla used');
+  });
+
+  it('only offers what Remi can really do, and never invents what family feel or plan', () => {
+    const p = buildCompanionPrompt(base);
+    expect(p).toContain('You cannot play music');
+    expect(p).toContain('Never make up what a family member feels, says or plans');
+    expect(p).toContain('Never say where someone is right now');
+  });
+
+  it('ends with a short check the model reads last: language, no guessing, real abilities, length', () => {
+    const p = buildCompanionPrompt(base);
+    const check = p.slice(p.indexOf('Before you answer, check:'));
+    expect(p.indexOf('Before you answer, check:')).toBeGreaterThan(p.indexOf("Today's routine"));
+    expect(check).toContain('Your reply is in Hindi.');
+    expect(check).toContain('You do not guess where anyone is or what they are doing.');
+    expect(check).toContain('You cannot move, find people, play music or make calls.');
+    expect(check).toContain("If asked where someone is, say you don't know where they are right now and offer to tell Priya.");
+    expect(check).toContain('You never invent memories or stories about her past; you ask her to tell you instead.');
+    expect(check).toContain('You never promise what someone else will do.');
+  });
+
   it('injects the family script when a sensitive topic matched', () => {
     const p = buildCompanionPrompt({ ...base, sensitive: { id: 'g', topic: 'Husband Ramesh', triggerWords: [], approach: 'share_memory', familyScript: 'Ramesh loved your rajma.', callPersonName: null } });
     expect(p).toContain('Ramesh loved your rajma.');

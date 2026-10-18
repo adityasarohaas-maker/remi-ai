@@ -39,6 +39,14 @@ describe('handleTalk', () => {
     expect(logged[0]).toMatchObject({ type: 'conversation', payload: { text: 'What day is it?', mood: 'calm', fallback: false } });
   });
 
+  it('keeps the mood line on earlier replies so the model keeps writing it', async () => {
+    const { deps, chat } = makeDeps({ recentTurns: async () => [{ text: 'Hello', reply: 'Hello Kamla.', mood: 'happy' }, { text: 'Hi', reply: 'Hi.', mood: 'unknown' }] });
+    await handleTalk(deps, { householdId: 'h1', text: 'And what time?' });
+    const messages = (chat.mock.calls[0] as unknown[])[0] as { role: string; content: string }[];
+    expect(messages[2].content).toBe('Hello Kamla.\nMOOD: happy');
+    expect(messages[4].content).toBe('Hi.');
+  });
+
   it('sends the last turns as history', async () => {
     const { deps, chat } = makeDeps();
     await handleTalk(deps, { householdId: 'h1', text: 'And what time?' });
@@ -212,6 +220,55 @@ describe('handleTalk', () => {
       const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
       expect((await handleTalk(deps, followup('the tea is nice and hot'))).body.reply).toBeNull();
       expect((await handleTalk(deps, followup('what day is it'))).body.reply).toMatch(/^Today is Saturday/);
+    });
+  });
+  it('answers in Hindi when she speaks Hindi, even in an English household', async () => {
+    const { deps, chat } = makeDeps();
+    await handleTalk(deps, { householdId: 'h1', text: 'मुझे रोहन की याद आ रही है' });
+    const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+    expect(messages[0].content).toContain('Usually reply in Hindi');
+  });
+
+  it('says the clock answer in Hindi without the model when she asks in Hindi', async () => {
+    const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+    expect((await handleTalk(deps, { householdId: 'h1', text: 'आज क्या दिन है' })).body.reply).toMatch(/^आज Saturday है/);
+  });
+  it('puts the reply language on her own message when she speaks Hindi', async () => {
+    const { deps, chat } = makeDeps();
+    await handleTalk(deps, { householdId: 'h1', text: 'मुझे रोहन की याद आ रही है' });
+    const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+    expect(messages.at(-1)!.content).toBe('मुझे रोहन की याद आ रही है\n\n(Reply in Hindi.)');
+  });
+
+  it('leaves her message alone in the household language', async () => {
+    const { deps, chat } = makeDeps();
+    await handleTalk(deps, { householdId: 'h1', text: 'Hello' });
+    const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+    expect(messages.at(-1)!.content).toBe('Hello');
+  });
+  describe('telling the family', () => {
+    const replyWithMessage = 'I will let Priya know.\nTELL_FAMILY: Kamla would like to talk to Rohan.\nMOOD: calm';
+
+    it('sends the message to the family and keeps it out of what Remi says', async () => {
+      const { deps, alerts, logged } = makeDeps({ chat: async () => replyWithMessage });
+      const r = await handleTalk(deps, { householdId: 'h1', text: 'Yes, please tell her' });
+      expect(r.body.reply).toBe('I will let Priya know.');
+      expect(alerts).toContainEqual({ reason: 'message', detail: 'Kamla would like to talk to Rohan.' });
+      expect(logged[0].payload).toMatchObject({ toldFamily: 'Kamla would like to talk to Rohan.' });
+    });
+
+    it('limits how often messages go out, but still answers', async () => {
+      const { deps, alerts } = makeDeps({ chat: async () => replyWithMessage, takeRateToken: async (_h, b) => b !== 'tell-family' });
+      const r = await handleTalk(deps, { householdId: 'h1', text: 'Yes, please tell her' });
+      expect(r.body.reply).toBe('I will let Priya know.');
+      expect(alerts).toEqual([]);
+    });
+
+    it('explains the TELL_FAMILY line in the prompt', async () => {
+      const { deps, chat } = makeDeps();
+      await handleTalk(deps, { householdId: 'h1', text: 'Hello' });
+      const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+      expect(messages[0].content).toContain('TELL_FAMILY:');
     });
   });
 });

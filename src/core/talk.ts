@@ -6,8 +6,8 @@ import { localParts } from './time';
 import { reminderStates } from './reminders';
 import { detectSafetyWords } from './safety';
 import { findSensitiveGuidance } from './sensitive';
-import { parseMoodTag, type Mood } from './mood';
-import { buildCompanionPrompt } from './companion-prompt';
+import { parseMoodTag, extractTellFamily, type Mood } from './mood';
+import { buildCompanionPrompt, languageName } from './companion-prompt';
 import { fallbackReply, helpSentMessage, timeAnswer } from './messages';
 import { worthJoining, JOIN_IN_COOLDOWN_SECONDS } from './listening';
 
@@ -15,11 +15,13 @@ export const MAX_INPUT = 500;
 export const RATE_PER_MIN = 20;         // model calls per household per minute
 export const CLIENT_RATE_PER_MIN = 12;  // per caller IP — the demo tablet link is public
 export const SAFETY_ALERTS_PER_MIN = 3; // repeated distress in one minute is one alert, not ten
+export const TELL_FAMILY_PER_10_MIN = 3; // messages Remi passes on to the family
 
 export interface CoreDeps {
   now(): Date;
   loadContext(householdId: string, now: Date): Promise<HouseholdContext>;
-  recentTurns(householdId: string, since: Date): Promise<{ text: string; reply: string }[]>;
+  /** The latest turns since `since`, oldest first. */
+  recentTurns(householdId: string, since: Date): Promise<{ text: string; reply: string; mood?: string }[]>;
   /** Atomically takes one token from a fixed window; false when the window is full. */
   takeRateToken(householdId: string, bucket: string, limit: number, windowSeconds: number): Promise<boolean>;
   chat(messages: ChatMessage[], opts: { maxTokens: number; temperature: number }): Promise<string>;
@@ -37,6 +39,8 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
   const { householdId } = input;
   const ctx = await deps.loadContext(householdId, now);
   const h = ctx.household;
+  // People with dementia often go back to their first language: answer Hindi in Hindi, whatever the household default.
+  const language = /[ऀ-ॿ]/.test(text) ? 'hi-IN' : h.language;
 
   // Safety comes before any rate limit: a fall must reach the family even when the tablet is busy.
   const safety = detectSafetyWords(text);
@@ -59,7 +63,7 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
     && (!input.clientKey || (await deps.takeRateToken(householdId, `talk-client:${input.clientKey}`, CLIENT_RATE_PER_MIN, 60)));
   if (!allowed) {
     await Promise.allSettled(alerts);
-    const busyReply = safety.length ? helpSentMessage(h.language, h.primaryContactName) : maySkip ? null : fallbackReply(h.language);
+    const busyReply = safety.length ? helpSentMessage(language, h.primaryContactName) : maySkip ? null : fallbackReply(language);
     return { status: 429, body: { error: 'too many requests', reply: busyReply, alerted: safety.length > 0 } };
   }
 
@@ -69,7 +73,7 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
   }
 
   const system = buildCompanionPrompt({
-    preferredName: h.preferredName, language: h.language, about: h.about,
+    preferredName: h.preferredName, language, about: h.about,
     now: local, people: ctx.people,
     routine: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
     primaryContactName: h.primaryContactName, sensitive, safety, heardAs: input.mode === 'addressed' ? undefined : input.mode,
@@ -77,27 +81,39 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
   const history = (await deps.recentTurns(householdId, new Date(now.getTime() - 30 * 60_000))).slice(-6);
   const messages: ChatMessage[] = [
     { role: 'system', content: system },
-    ...history.flatMap((t): ChatMessage[] => [{ role: 'user', content: t.text }, { role: 'assistant', content: t.reply }]),
-    { role: 'user', content: text },
+    // Earlier replies keep their MOOD line: without it the model copies the history and stops writing one.
+    ...history.flatMap((t): ChatMessage[] => [
+      { role: 'user', content: t.text },
+      { role: 'assistant', content: t.mood && t.mood !== 'unknown' ? `${t.reply}\nMOOD: ${t.mood}` : t.reply },
+    ]),
+    // An English history outweighs the system prompt; a note on her own message does not get lost.
+    { role: 'user', content: language === h.language ? text : `${text}\n\n(Reply in ${languageName(language)}.)` },
   ];
 
   let reply: string | null = '';
   let mood: Mood = 'unknown';
   let fallback = false;
+  let toldFamily: string | null = null;
   try {
-    ({ reply, mood } = parseMoodTag(await deps.chat(messages, { maxTokens: 300, temperature: 0.4 })));
+    ({ reply, mood } = parseMoodTag(await deps.chat(messages, { maxTokens: 300, temperature: 0.3 })));
+    const told = extractTellFamily(reply);
+    reply = told.reply;
     if (!reply) throw new Error('empty reply');
+    if (told.message && (await deps.takeRateToken(householdId, 'tell-family', TELL_FAMILY_PER_10_MIN, 600))) {
+      toldFamily = told.message;
+      alerts.push(deps.alert(householdId, 'message', told.message));
+    }
     if (maySkip && !safety.length && /^\s*SKIP\b/i.test(reply)) reply = null;
   } catch {
     // Without the model: safety first, then the family's own words, then the clock, then a calm sentence
     // (or silence, if it may not have been said to Remi).
-    reply = safety.length ? helpSentMessage(h.language, h.primaryContactName)
-      : sensitive?.familyScript || timeAnswer(text, local, h.language) || (maySkip ? null : fallbackReply(h.language));
+    reply = safety.length ? helpSentMessage(language, h.primaryContactName)
+      : sensitive?.familyScript || timeAnswer(text, local, language) || (maySkip ? null : fallbackReply(language));
     fallback = true;
   }
 
   await Promise.allSettled(alerts);
   if (reply === null) return { ...silent, body: { reply: null, alerted: alerts.length > 0 } };
-  await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed' });
+  await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed', toldFamily });
   return { status: 200, body: { reply, mood, alerted: safety.length > 0 || alerts.length > 0 } };
 }

@@ -17,3 +17,17 @@ export function parseMoodTag(raw: string): { reply: string; mood: Mood } {
   }
   return { reply: kept.join('\n').trim(), mood };
 }
+
+const TELL = /^\s*\[?\s*tell_family\s*:\s*(.*?)\s*\]?\s*$/i;
+
+/** Remi's one action: a short message for the family, on its own TELL_FAMILY: line. Never spoken aloud. */
+export function extractTellFamily(reply: string): { reply: string; message: string | null } {
+  let message: string | null = null;
+  const kept: string[] = [];
+  for (const line of reply.split('\n')) {
+    const m = line.match(TELL);
+    if (m) message = m[1].trim() || null;
+    else kept.push(line);
+  }
+  return { reply: kept.join('\n').trim(), message };
+}

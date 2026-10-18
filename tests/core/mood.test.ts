@@ -18,3 +18,19 @@ describe('parseMoodTag', () => {
     expect(parseMoodTag('<think>x</think>Hi.\nMOOD: happy')).toEqual({ reply: 'Hi.', mood: 'happy' });
   });
 });
+
+import { extractTellFamily } from '@/core/mood';
+
+describe('extractTellFamily', () => {
+  it('takes the message for the family out of the spoken reply', () => {
+    expect(extractTellFamily('Of course. I will let Priya know.\nTELL_FAMILY: Kamla would like Rohan to call her.'))
+      .toEqual({ reply: 'Of course. I will let Priya know.', message: 'Kamla would like Rohan to call her.' });
+  });
+  it('accepts brackets and lower case', () => {
+    expect(extractTellFamily('Okay.\n[tell_family: She misses Rohan]')).toEqual({ reply: 'Okay.', message: 'She misses Rohan' });
+  });
+  it('returns no message when there is none or it is empty', () => {
+    expect(extractTellFamily('Hello.')).toEqual({ reply: 'Hello.', message: null });
+    expect(extractTellFamily('Hello.\nTELL_FAMILY:   ')).toEqual({ reply: 'Hello.', message: null });
+  });
+});

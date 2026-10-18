@@ -1,12 +1,13 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
-export type AlertReason = 'safety' | 'call_request' | 'help_button';
+export type AlertReason = 'safety' | 'call_request' | 'help_button' | 'message';
 
 const LABEL: Record<AlertReason, string> = {
   safety: 'Safety words heard',
   call_request: 'Please call now',
   help_button: 'Help button pressed',
+  message: 'A message from Remi',
 };
 
 export function formatAlertMessage(preferredName: string, reason: AlertReason, detail: string): string {

@@ -43,8 +43,9 @@ export function supabaseDeps(): CoreDeps {
 
     async recentTurns(householdId, since) {
       const { data } = await db.from('events').select('payload').eq('household_id', householdId).eq('type', 'conversation')
-        .gte('created_at', since.toISOString()).order('created_at', { ascending: true }).limit(20);
-      return (data ?? []).map((e) => e.payload as { text: string; reply: string });
+        .gte('created_at', since.toISOString()).order('created_at', { ascending: false }).limit(6);
+      // newest six, returned oldest first (ascending + limit kept the oldest ones in a long chat)
+      return (data ?? []).reverse().map((e) => e.payload as { text: string; reply: string; mood?: string });
     },
 
     async takeRateToken(householdId, bucket, limit, windowSeconds) {
@@ -59,7 +60,7 @@ export function supabaseDeps(): CoreDeps {
     },
 
     // Live replies: one attempt, short budget — the patient gets the calm fallback instead of a long wait.
-    chat: (messages, opts) => chatText(messages, { model: MODELS.chat(), timeoutMs: 10_000, maxRetries: 0, ...opts }),
+    chat: (messages, opts) => chatText(messages, { model: MODELS.chat(), timeoutMs: 15_000, maxRetries: 0, ...opts }),
 
     async logEvent(householdId, type, payload) {
       const { error } = await db.from('events').insert({ household_id: householdId, type, payload });
