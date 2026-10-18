@@ -8,7 +8,7 @@ import { detectSafetyWords } from './safety';
 import { findSensitiveGuidance } from './sensitive';
 import { parseMoodTag, type Mood } from './mood';
 import { buildCompanionPrompt } from './companion-prompt';
-import { fallbackReply } from './messages';
+import { fallbackReply, helpSentMessage } from './messages';
 
 export const MAX_INPUT = 500;
 export const RATE_PER_MIN = 20;         // model calls per household per minute
@@ -75,7 +75,9 @@ export async function handleTalk(deps: CoreDeps, input: { householdId: string; t
     ({ reply, mood } = parseMoodTag(await deps.chat(messages, { maxTokens: 300, temperature: 0.4 })));
     if (!reply) throw new Error('empty reply');
   } catch {
-    reply = fallbackReply(h.language);
+    // Without the model, safety comes first, then the family's own words, then a calm sentence.
+    reply = safety.length ? helpSentMessage(h.language, h.primaryContactName)
+      : sensitive?.familyScript || fallbackReply(h.language);
     fallback = true;
   }
 

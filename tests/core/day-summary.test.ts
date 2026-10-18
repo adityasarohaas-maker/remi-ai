@@ -32,6 +32,11 @@ describe('summarizeDay', () => {
     expect(f.topQuestions[0]).toEqual({ text: 'what day is it', count: 2 });
     expect(f.topQuestions.map((q) => q.text)).not.toContain('i like the garden');
   });
+  it('drops questions that are only punctuation', () => {
+    const f = summarizeDay('2026-10-17', [ev('conversation', { text: '?? ??? ?' }, '2026-10-17T03:00:00Z')], [], 'Asia/Kolkata');
+    expect(f.topQuestions).toEqual([]);
+  });
+
   it('tracks mood by part of day in the household time zone', () => {
     expect(f.moodCounts).toEqual({ calm: 2, confused: 1, sad: 1, happy: 1 });
     expect(f.moodByPart.morning).toBe('calm');

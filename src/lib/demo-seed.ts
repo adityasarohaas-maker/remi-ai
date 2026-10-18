@@ -45,8 +45,8 @@ export async function seedDemo(): Promise<void> {
   }
 
   const { data: people, error: pErr } = await db.from('people').insert([
-    { household_id: DEMO_HOUSEHOLD_ID, name: 'Rohan', relation: 'grandson', notes: 'Plays cricket for his college team. Ask him about his last match.' },
-    { household_id: DEMO_HOUSEHOLD_ID, name: 'Priya', relation: 'daughter', notes: "Lives with Kamla. Works as a nurse. Loves her mother's rajma." },
+    { household_id: DEMO_HOUSEHOLD_ID, name: 'Rohan', relation: 'grandson', notes: 'Plays cricket for his college team. Ask him about his last match.', is_deceased: false },
+    { household_id: DEMO_HOUSEHOLD_ID, name: 'Priya', relation: 'daughter', notes: "Lives with Kamla. Works as a nurse. Loves her mother's rajma.", is_deceased: false },
     { household_id: DEMO_HOUSEHOLD_ID, name: 'Ramesh', relation: 'husband', notes: 'Married 52 years. Loved Sunday walks to the temple.', is_deceased: true },
   ]).select('id, name');
   if (pErr || !people) throw pErr ?? new Error('people insert failed');

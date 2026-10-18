@@ -5,6 +5,7 @@ const client = new OpenAI({
   apiKey: process.env.NEBIUS_API_KEY,
 });
 
+async function main() {
 const list = await client.models.list();
 const nvidia = list.data.map((m) => m.id).filter((id) => /nemotron|nvidia/i.test(id));
 console.log('NVIDIA models on this key:\n ' + nvidia.join('\n '));
@@ -34,3 +35,6 @@ for (const model of [process.env.NEBIUS_CHAT_MODEL!, process.env.NEBIUS_REPORT_M
     console.log(`\n${model}: FAILED`, (e as Error).message);
   }
 }
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });

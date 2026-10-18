@@ -119,4 +119,17 @@ describe('handleTalk', () => {
     await handleTalk(deps, { householdId: 'h1', text: 'I want my mother' });
     expect(alerts).toEqual([{ reason: 'call_request', detail: expect.stringContaining('Priya') }]);
   });
+  it("says the family's own words when the model is down and guidance matches", async () => {
+    const { deps, logged } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+    const r = await handleTalk(deps, { householdId: 'h1', text: 'Where is Ramesh?' });
+    expect(r.body.reply).toBe('Ramesh loved your rajma.');
+    expect(logged[0].payload).toMatchObject({ fallback: true, sensitiveTopic: 'Husband Ramesh' });
+  });
+
+  it('tells her the family knows when the model is down and safety words were heard', async () => {
+    const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+    const r = await handleTalk(deps, { householdId: 'h1', text: 'I fell down' });
+    expect(r.body.reply).toBe("I've told Priya. Someone will be in touch very soon.");
+    expect(r.body.alerted).toBe(true);
+  });
 });

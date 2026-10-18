@@ -51,7 +51,7 @@ export function summarizeDay(day: string, events: DayEvent[], reminders: Routine
     moodCounts,
     moodByPart,
     topQuestions: tally(convo.map((e) => String(e.payload.text ?? '')).filter(isQuestion).map(norm))
-      .slice(0, 5).map(({ key, count }) => ({ text: key, count })),
+      .filter(({ key }) => key !== '').slice(0, 5).map(({ key, count }) => ({ text: key, count })),
     sensitiveTopics: tally(convo.map((e) => e.payload.sensitiveTopic).filter((t): t is string => typeof t === 'string'))
       .map(({ key, count }) => ({ topic: key, count })),
     reminders: reminders.map((r) => ({ time: r.timeOfDay.slice(0, 5), label: r.label, kind: r.kind, state: r.state })),
