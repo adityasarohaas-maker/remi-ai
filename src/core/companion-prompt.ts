@@ -24,6 +24,8 @@ export interface CompanionPromptInput {
   now: { weekday: string; prettyDate: string; prettyTime: string; partOfDay: PartOfDay };
   people: Person[]; routine: RoutineWithState[]; primaryContactName: string | null;
   sensitive: Guidance | null; safety: SafetyCategory[];
+  /** Not certainly said to Remi: overheard near the tablet, or said just after Remi spoke. */
+  heardAs?: 'overheard' | 'followup';
 }
 
 const APPROACH: Record<Guidance['approach'], (who: string, call: string) => string> = {
@@ -63,6 +65,12 @@ export function buildCompanionPrompt(i: CompanionPromptInput): string {
 ${APPROACH[i.sensitive.approach](who, i.sensitive.callPersonName ?? contact)}
 The family's words: "${i.sensitive.familyScript}"
 Follow the family's guidance closely. Do not say that anyone has died unless the family's words say so.`);
+  }
+  if (i.heardAs === 'overheard' && !i.safety.length) {
+    sections.push(`${who} said this out loud, not to you, perhaps to someone else in the room. Join in only if you can really help ${who}: answer a question about the day, the time, the family or the routine, or comfort confusion or worry. Otherwise reply with exactly SKIP and nothing else.`);
+  }
+  if (i.heardAs === 'followup' && !i.safety.length) {
+    sections.push(`You spoke a moment ago. What ${who} said now may be a reply to you, or may be said to someone else in the room. If it is for you, answer as usual. If it is not, reply with exactly SKIP and nothing else.`);
   }
   if (i.safety.length) {
     sections.push(`${who} may be in difficulty (${i.safety.join(', ')}). Reassure them calmly and tell them you are letting ${contact} know right now. Do not promise anything else.`);

@@ -8,7 +8,14 @@ import type { Api } from '../patient-app';
 
 type Result = { name?: string; relation?: string; reply: string };
 
-export function Face({ api, language, back }: { api: Api; language: string; back: () => void }) {
+export function Face({ api, language, back, say, autoLook = false }: {
+  api: Api; language: string; back: () => void;
+  /** Remi's voice (pauses the listener); plain speech when hands-free is off. */
+  say?: (text: string) => void;
+  /** Opened by "Remi, who is this?": look as soon as the camera is on. */
+  autoLook?: boolean;
+}) {
+  const talk = say ?? ((text: string) => speak(text, language));
   const t = labelsFor(language);
   const video = useRef<HTMLVideoElement>(null);
   const [camera, setCamera] = useState<'starting' | 'on' | 'off'>('starting');
@@ -33,6 +40,17 @@ export function Face({ api, language, back }: { api: Api; language: string; back
     return () => { cancelled = true; stream?.getTracks().forEach((tr) => tr.stop()); };
   }, []);
 
+  const looked = useRef(false);
+  useEffect(() => {
+    if (!autoLook || camera !== 'on' || looked.current) return;
+    const id = setTimeout(() => { // let the camera settle first
+      if (!video.current || looked.current) return;
+      looked.current = true;
+      identify(video.current);
+    }, 1200);
+    return () => clearTimeout(id);
+  }, [autoLook, camera]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function identify(source: HTMLVideoElement | HTMLImageElement) {
     setBusy(true);
     setResult(null);
@@ -41,14 +59,14 @@ export function Face({ api, language, back }: { api: Api; language: string; back
       if (!embedding) {
         const reply = noFaceMessage(language);
         setResult({ reply });
-        speak(reply, language);
+        talk(reply);
         return;
       }
       const res = await api('identify', { method: 'POST', body: JSON.stringify({ embedding }) });
       const data = await res.json().catch(() => null);
       const r: Result = res.ok && data ? data : { reply: t.retry };
       setResult(r);
-      speak(r.reply, language);
+      talk(r.reply);
     } catch {
       setResult({ reply: t.retry });
     } finally {

@@ -7,7 +7,14 @@ import type { TodayData } from './today';
 
 type Go = (s: 'talk' | 'face' | 'today') => void;
 
-export function Home({ api, preferredName, language, today, go }: { api: Api; preferredName: string; language: string; today: TodayData | null; go: Go }) {
+type Props = {
+  api: Api; preferredName: string; language: string; today: TodayData | null; go: Go;
+  /** Remi's voice when hands-free is on, so Remi does not hear itself. */
+  say?: (text: string) => void;
+  heard?: string; reply?: string;
+};
+
+export function Home({ api, preferredName, language, today, go, say, heard, reply }: Props) {
   const t = labelsFor(language);
   const [help, setHelp] = useState<'idle' | 'sending' | string>('idle');
   const part = (today?.now.partOfDay ?? 'morning') as keyof typeof t.greeting;
@@ -17,9 +24,9 @@ export function Home({ api, preferredName, language, today, go }: { api: Api; pr
     try {
       const res = await api('help', { method: 'POST' });
       const data = await res.json();
-      const reply = res.ok ? data.reply : t.retry;
-      setHelp(reply);
-      speak(reply, language);
+      const answer = res.ok ? data.reply : t.retry;
+      setHelp(answer);
+      (say ?? ((x: string) => speak(x, language)))(answer);
     } catch {
       setHelp(t.retry);
     }
@@ -27,6 +34,8 @@ export function Home({ api, preferredName, language, today, go }: { api: Api; pr
 
   return (
     <main className="flex flex-1 flex-col justify-between gap-10 px-6 py-8 sm:px-12 sm:py-12">
+      {/* On a tablet, Remi's words sit beside the date so the help button never leaves the screen. */}
+      <div className="grid gap-8 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center lg:gap-16">
       <header>
         <p className="text-3xl sm:text-4xl">{t.greeting[part]}, {preferredName}.</p>
         {today ? (
@@ -40,6 +49,14 @@ export function Home({ api, preferredName, language, today, go }: { api: Api; pr
           <div className="mt-4 h-[11rem] sm:h-[16rem]" aria-hidden />
         )}
       </header>
+
+      {reply && (
+        <section aria-live="polite" className="settle max-w-4xl rounded-[2rem] bg-white p-6 sm:p-8" key={reply}>
+          {heard && <p className="text-2xl text-ink/70 sm:text-3xl">“{heard}”</p>}
+          <p className="mt-2 text-3xl leading-snug sm:text-4xl"><span className="font-semibold text-garden-deep">{t.remiSaid}:</span> {reply}</p>
+        </section>
+      )}
+      </div>
 
       <nav className="grid gap-4 sm:grid-cols-3">
         <button onClick={() => go('talk')} className="min-h-28 rounded-3xl bg-garden px-6 text-3xl font-semibold text-paper hover:bg-garden-deep sm:min-h-40 sm:text-4xl">{t.talk}</button>

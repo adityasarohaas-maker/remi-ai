@@ -132,4 +132,86 @@ describe('handleTalk', () => {
     expect(r.body.reply).toBe("I've told Priya. Someone will be in touch very soon.");
     expect(r.body.alerted).toBe(true);
   });
+  describe('overheard speech', () => {
+    const overheard = (text: string) => ({ householdId: 'h1', text, mode: 'overheard' as const });
+
+    it('stays silent on ordinary chatter, without calling the model or saving it', async () => {
+      const { deps, chat, logged } = makeDeps();
+      const r = await handleTalk(deps, overheard('the tea is nice and hot'));
+      expect(r.body.reply).toBeNull();
+      expect(chat).not.toHaveBeenCalled();
+      expect(logged).toEqual([]);
+    });
+
+    it('joins in on a question it can help with, and says it was overheard', async () => {
+      const { deps, chat, logged } = makeDeps();
+      const r = await handleTalk(deps, overheard('what day is it today'));
+      expect(r.body.reply).toBe('It is Saturday.');
+      const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+      expect(messages[0].content).toContain('not to you');
+      expect(messages[0].content).toContain('SKIP');
+      expect(logged[0].payload).toMatchObject({ mode: 'overheard', text: 'what day is it today' });
+    });
+
+    it('stays silent when the model decides to skip', async () => {
+      const { deps, logged } = makeDeps({ chat: async () => 'SKIP\nMOOD: calm' });
+      expect((await handleTalk(deps, overheard('when is lunch'))).body.reply).toBeNull();
+      expect(logged).toEqual([]);
+    });
+
+    it('joins in at most once per cooldown', async () => {
+      const { deps, chat } = makeDeps({ takeRateToken: async (_h, bucket) => bucket !== 'join-in' });
+      expect((await handleTalk(deps, overheard('what day is it today'))).body.reply).toBeNull();
+      expect(chat).not.toHaveBeenCalled();
+    });
+
+    it('always acts on safety words', async () => {
+      const { deps, alerts } = makeDeps({ takeRateToken: async (_h, bucket) => bucket !== 'join-in' });
+      const r = await handleTalk(deps, overheard('I fell down'));
+      expect(alerts[0].reason).toBe('safety');
+      expect(r.body.reply).toBeTruthy();
+    });
+
+    it('answers the day from the clock when the model is down', async () => {
+      const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+      expect((await handleTalk(deps, overheard('what day is it today'))).body.reply).toBe('Today is Saturday, 17 October 2026. It is 1:10 pm.');
+    });
+
+    it('stays silent when the model is down and there is nothing sure to say', async () => {
+      const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+      expect((await handleTalk(deps, overheard('when is Priya coming'))).body.reply).toBeNull();
+    });
+  });
+
+  it('answers the day from the clock when the model is down, in Hindi too', async () => {
+    const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+    expect((await handleTalk(deps, { householdId: 'h1', text: 'What time is it?' })).body.reply).toBe('Today is Saturday, 17 October 2026. It is 1:10 pm.');
+    const hi = makeDeps({
+      chat: async () => { throw new Error('no key'); },
+      loadContext: async () => ({ ...ctx, household: { ...ctx.household, language: 'hi-IN' } }),
+    });
+    expect((await handleTalk(hi.deps, { householdId: 'h1', text: 'आज क्या दिन है' })).body.reply).toBe('आज Saturday है, 17 October 2026। अभी 1:10 pm बजे हैं।');
+  });
+  describe('speech just after Remi spoke', () => {
+    const followup = (text: string) => ({ householdId: 'h1', text, mode: 'followup' as const });
+
+    it('answers a reply without needing the wake word or a question', async () => {
+      const { deps, chat } = makeDeps();
+      const r = await handleTalk(deps, followup('yes please'));
+      expect(r.body.reply).toBe('It is Saturday.');
+      const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+      expect(messages[0].content).toContain('may be a reply');
+    });
+
+    it('stays silent when the model says it was not for Remi', async () => {
+      const { deps } = makeDeps({ chat: async () => 'SKIP' });
+      expect((await handleTalk(deps, followup('the tea is nice and hot'))).body.reply).toBeNull();
+    });
+
+    it('stays silent without the model unless it is sure what to say', async () => {
+      const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+      expect((await handleTalk(deps, followup('the tea is nice and hot'))).body.reply).toBeNull();
+      expect((await handleTalk(deps, followup('what day is it'))).body.reply).toMatch(/^Today is Saturday/);
+    });
+  });
 });

@@ -6,6 +6,12 @@ const EN = {
   retry: "Let's try that again in a moment.",
   state: { upcoming: 'Later', due: 'Now', done: 'Done ✓', missed: 'Not yet' },
   nothingToday: 'Nothing planned for today.',
+  startRemi: 'Start Remi', notNow: 'Not now', startHint: 'Tap once. After that, just say “Remi” and talk.',
+  remiListening: 'Remi is listening. Say “Remi” to talk.', remiThinking: 'Remi is thinking…', remiSpeaking: 'Remi is speaking…',
+  remiBlocked: 'The microphone is off. Tap “Talk to me” to talk.', remiUnsupported: 'Tap “Talk to me” to talk to Remi.',
+  remiSaid: 'Remi',
+  intro: (name: string) => `Hello ${name}. I'm Remi, and I'm right here with you. Just say Remi whenever you want me.`,
+  looking2: 'Let me have a look.', yourDay: 'Here is your day.',
 };
 
 type Labels = typeof EN;
@@ -18,6 +24,12 @@ const HI: Labels = {
   retry: 'थोड़ी देर में फिर कोशिश करते हैं।',
   state: { upcoming: 'बाद में', due: 'अभी', done: 'हो गया ✓', missed: 'अभी नहीं हुआ' },
   nothingToday: 'आज के लिए कुछ तय नहीं है।',
+  startRemi: 'रेमी शुरू करें', notNow: 'अभी नहीं', startHint: 'एक बार छुएँ। फिर बस “रेमी” बोलकर बात करें।',
+  remiListening: 'रेमी सुन रहा है। बात करने के लिए “रेमी” बोलें।', remiThinking: 'रेमी सोच रहा है…', remiSpeaking: 'रेमी बोल रहा है…',
+  remiBlocked: 'माइक बंद है। बात करने के लिए “मुझसे बात करें” छुएँ।', remiUnsupported: 'रेमी से बात करने के लिए “मुझसे बात करें” छुएँ।',
+  remiSaid: 'रेमी',
+  intro: (name: string) => `नमस्ते ${name}। मैं रेमी हूँ, मैं आपके साथ हूँ। जब भी मेरी ज़रूरत हो, बस रेमी बोलिए।`,
+  looking2: 'मैं देखता हूँ।', yourDay: 'ये रहा आपका दिन।',
 };
 
 export function labelsFor(language: string): Labels {

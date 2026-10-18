@@ -8,3 +8,7 @@ export function stripReasoning(s: string): string {
   const open = afterClose.toLowerCase().indexOf('<think>');
   return (open >= 0 ? afterClose.slice(0, open) : afterClose).trim();
 }
+
+// (?=\s|$) instead of \b: JS \b does not treat Devanagari as word characters
+const QUESTION_START = /^(what|when|where|who|why|how|is|are|am|can|will|did|do|does|kya|kab|kahan|kaun|kyun|kaise|क्या|कब|कहाँ|कौन|क्यों|कैसे)(?=\s|$)/i;
+export const isQuestion = (s: string) => /[?？]\s*$/.test(s) || QUESTION_START.test(s.trim());

@@ -28,3 +28,86 @@ describe('speechErrorAction (final review C1)', () => {
     expect(speechErrorAction('aborted')).toBe('quiet');
   });
 });
+
+import { createListener, type SpeechRecognitionLike } from '@/lib/speech';
+
+class FakeRec implements SpeechRecognitionLike {
+  static all: FakeRec[] = [];
+  lang = ''; interimResults = true; maxAlternatives = 0; continuous = false;
+  onresult: SpeechRecognitionLike['onresult'] = null;
+  onerror: SpeechRecognitionLike['onerror'] = null;
+  onend: SpeechRecognitionLike['onend'] = null;
+  running = false;
+  constructor() { FakeRec.all.push(this); }
+  start() { this.running = true; }
+  stop() { this.running = false; this.onend?.(); }
+  abort() { this.stop(); }
+  say(text: string, isFinal = true) {
+    const result = Object.assign([{ transcript: text }], { isFinal });
+    this.onresult?.({ resultIndex: 0, results: [result] });
+  }
+}
+const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms));
+
+describe('createListener', () => {
+  it('listens continuously, passes on final phrases only, and restarts when the browser stops it', async () => {
+    FakeRec.all = [];
+    const heard: string[] = [];
+    const l = createListener(FakeRec, { lang: 'en-IN', onText: (t) => heard.push(t), onState: () => {}, restartDelayMs: 0 });
+    l.start();
+    const rec = FakeRec.all[0];
+    expect(rec.continuous).toBe(true);
+    expect(rec.lang).toBe('en-IN');
+    rec.say('Remi what', false);
+    rec.say('Remi what day is it');
+    expect(heard).toEqual(['Remi what day is it']);
+    rec.running = false; rec.onend?.(); // Chrome ends recognition after a silence
+    await wait(5);
+    expect(rec.running).toBe(true);
+  });
+
+  it('stays paused while Remi speaks and does not restart until resumed', async () => {
+    FakeRec.all = [];
+    const l = createListener(FakeRec, { lang: 'en-IN', onText: () => {}, onState: () => {}, restartDelayMs: 0 });
+    l.start();
+    const rec = FakeRec.all[0];
+    l.pause();
+    await wait(5);
+    expect(rec.running).toBe(false);
+    l.resume();
+    await wait(5);
+    expect(rec.running).toBe(true);
+  });
+
+  it('gives up and reports blocked when the microphone is not allowed', async () => {
+    FakeRec.all = [];
+    const states: string[] = [];
+    const l = createListener(FakeRec, { lang: 'en-IN', onText: () => {}, onState: (s) => states.push(s), restartDelayMs: 0 });
+    l.start();
+    const rec = FakeRec.all[0];
+    rec.onerror?.({ error: 'not-allowed' });
+    rec.running = false; rec.onend?.();
+    await wait(5);
+    expect(rec.running).toBe(false);
+    expect(states.at(-1)).toBe('blocked');
+  });
+});
+
+import { speakAsync } from '@/lib/speech';
+
+describe('speakAsync', () => {
+  it('resolves when the voice finishes, and does not hang if the browser never says so', async () => {
+    const spoken: { text: string; onend?: () => void }[] = [];
+    const g = globalThis as Record<string, unknown>;
+    g.SpeechSynthesisUtterance = class { text: string; lang = ''; rate = 1; voice = null; onend?: () => void; onerror?: () => void; constructor(t: string) { this.text = t; } };
+    g.window = { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (u: { text: string; onend?: () => void }) => spoken.push(u) } };
+    try {
+      const done = speakAsync('Hello Kamla', 'en-IN');
+      spoken[0].onend?.();
+      await expect(done).resolves.toBeUndefined();
+      await expect(speakAsync('never ends', 'en-IN', 20)).resolves.toBeUndefined();
+    } finally {
+      delete g.window; delete g.SpeechSynthesisUtterance;
+    }
+  });
+});

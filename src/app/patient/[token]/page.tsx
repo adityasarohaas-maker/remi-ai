@@ -12,5 +12,11 @@ export default async function PatientPage({ params }: { params: Promise<{ token:
   if (!householdId) notFound();
   const { data: h } = await supabaseAdmin().from('households').select('preferred_name, language').eq('id', householdId).single();
   if (!h) notFound();
-  return <PatientApp token={token} preferredName={h.preferred_name} language={h.language} />;
+  const { data: people } = await supabaseAdmin().from('people').select('name, relation, is_deceased').eq('household_id', householdId).order('created_at');
+  return (
+    <PatientApp
+      token={token} preferredName={h.preferred_name} language={h.language}
+      people={(people ?? []).map((p) => ({ name: p.name, relation: p.relation, isDeceased: p.is_deceased }))}
+    />
+  );
 }

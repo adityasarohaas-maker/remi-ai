@@ -19,8 +19,20 @@ All model calls go through Nebius Token Factory's OpenAI-compatible API (`https:
 
 The hosted demo opens a demo family (Kamla, 78, from Jaipur) that resets every day:
 
-- **Open Kamla's tablet** — talk to Remi (Chrome or Edge for voice; other browsers get a text box), ask "What day is it?", ask "Where is my husband?", or choose a photo under *Who is this?*
+- **Open Kamla's tablet** and tap **Start Remi** once. Then just talk: "Remi, what day is it?", "Remi, where is my husband?", "Remi, who is this?" (Chrome or Edge on a laptop or Android tablet; other browsers get the buttons and a text box.) Add `?quiet=1` to the tablet link to hear Remi check in after one quiet minute.
 - **Open the family portal** — see the people, routine and hard-question guidance the family wrote, the alerts, the conversation log, and ask Remi to write today's evening note.
+
+## Hands-free Remi
+
+After one tap, Remi runs on its own, like a smart speaker that knows the family:
+
+- **Always listening, answers when spoken to.** Saying "Remi" (or "रेमी") wakes it; anything said in the few seconds after Remi speaks may be a reply, and Remi answers or stays quiet. Remi pauses its microphone while speaking, so it never hears itself.
+- **Joins in now and then.** Overheard questions about the day, a family member, or signs of confusion ("I want to go home") may get a gentle answer, at most once every three minutes. Ordinary chatter is ignored and **never saved or sent anywhere**.
+- **Acts on safety words even when not addressed.** "I fell" or "दर्द" alerts the family straight away.
+- **Speaks routine reminders by itself** and hears "done", "yes" or "हो गया" to tick them off.
+- **Checks in after a long quiet spell** during the day (never 9 pm–7 am), with a short, warm line.
+- **Voice shortcuts**: "Remi, who is this?" opens the camera and looks; "Remi, what's my day?" shows the routine.
+- **Works without the model too.** The clock answers "what day is it?", the family's own words answer hard questions, and safety alerts never depend on Nemotron.
 
 ## How it works
 

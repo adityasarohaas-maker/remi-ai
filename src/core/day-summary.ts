@@ -1,4 +1,5 @@
 import { localParts, type PartOfDay } from './time';
+import { isQuestion } from './text';
 import type { RoutineWithState, ReminderState } from './reminders';
 import type { Mood } from './mood';
 
@@ -18,10 +19,7 @@ export interface DayFacts {
   unsureFaces: number;
 }
 
-// (?=\s|$) instead of \b: JS \b does not treat Devanagari as word characters
-const QUESTION_START = /^(what|when|where|who|why|how|is|are|am|can|will|did|do|does|kya|kab|kahan|kaun|kyun|kaise|क्या|कब|कहाँ|कौन|क्यों|कैसे)(?=\s|$)/i;
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
-const isQuestion = (s: string) => /[?？]\s*$/.test(s) || QUESTION_START.test(s.trim());
 
 function tally(keys: string[]): { key: string; count: number }[] {
   const m = new Map<string, number>();

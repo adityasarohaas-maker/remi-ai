@@ -41,6 +41,16 @@ body {
   animation: settle 600ms ease-out both;
 }
 
+/* Remi is listening: a slow breath, not a blink. */
+@keyframes remi-breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
+
+.remi-dot {
+  animation: remi-breathe 3.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .settle { animation: none; }
+  .settle, .remi-dot { animation: none; }
 }
