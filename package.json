@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "smoke": "tsx --env-file=.env.local scripts/nebius-smoke.ts",
-    "seed:demo": "tsx --env-file=.env.local scripts/seed-demo.ts"
+    "seed:demo": "tsx --conditions=react-server --env-file=.env.local scripts/seed-demo.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
