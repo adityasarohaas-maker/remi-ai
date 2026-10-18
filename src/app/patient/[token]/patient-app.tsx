@@ -2,7 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { speak } from '@/lib/speech';
 import { labelsFor } from './labels';
-import { useRemi, type RemiPerson, type RemiStatus } from './use-remi';
+import { useRemi, type RemiPerson } from './use-remi';
+import { RemiOrb } from './remi-orb';
+import { RemiStatusLine } from './remi-status';
 import { Home } from './screens/home';
 import { Talk } from './screens/talk';
 import { Face } from './screens/face';
@@ -72,10 +74,11 @@ export function PatientApp({ token, preferredName, language, people }: { token: 
     <div className="flex min-h-dvh flex-col bg-paper text-ink">
       {remi.status === 'off' && !skipped && (
         <div className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-8 bg-paper px-6 text-center">
-          <button onClick={remi.start} className="min-h-40 w-full max-w-xl rounded-[2.5rem] bg-garden text-5xl font-semibold text-paper hover:bg-garden-deep sm:text-6xl">
-            {t.startRemi}
-          </button>
-          <p className="max-w-xl text-2xl sm:text-3xl">{t.startHint}</p>
+          <RemiOrb status="off" size="lg" label={t.startRemi} onPress={remi.start} />
+          <div>
+            <p className="text-4xl font-semibold text-garden-deep sm:text-5xl">{t.tapToBegin}</p>
+            <p className="mt-3 max-w-xl text-2xl text-ink/75 sm:text-3xl">{t.startHint}</p>
+          </div>
           <button onClick={() => setSkipped(true)} className="rounded-xl px-2 text-xl text-ink/70 underline underline-offset-4">{t.notNow}</button>
         </div>
       )}
@@ -85,8 +88,8 @@ export function PatientApp({ token, preferredName, language, people }: { token: 
           <button onClick={() => markDone(due.id)} className="min-h-16 rounded-2xl bg-ink px-8 text-paper">{t.done}</button>
         </div>
       )}
-      {remi.active && <RemiBar status={remi.status} language={language} />}
-      {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} say={say} heard={remi.heard} reply={remi.reply} />}
+      {remi.active && screen !== 'home' && <RemiStatusLine status={remi.status} language={language} className="px-6 pt-5 sm:px-12" />}
+      {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} />}
       {screen === 'talk' && <Talk api={api} language={language} back={() => go('home')} />}
       {screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} />}
       {screen === 'today' && <Today today={today} language={language} markDone={markDone} back={() => go('home')} />}
@@ -94,17 +97,3 @@ export function PatientApp({ token, preferredName, language, people }: { token: 
   );
 }
 
-function RemiBar({ status, language }: { status: RemiStatus; language: string }) {
-  const t = labelsFor(language);
-  const text = {
-    off: '', listening: t.remiListening, thinking: t.remiThinking, speaking: t.remiSpeaking,
-    blocked: t.remiBlocked, unsupported: t.remiUnsupported,
-  }[status];
-  const live = status === 'listening' || status === 'thinking' || status === 'speaking';
-  return (
-    <div className="flex items-center gap-3 px-6 pt-5 text-xl text-ink/80 sm:px-12 sm:text-2xl" role="status">
-      <span aria-hidden className={`size-4 shrink-0 rounded-full ${status === 'speaking' ? 'remi-dot bg-marigold' : live ? 'remi-dot bg-garden' : 'bg-stone-400'}`} />
-      {text}
-    </div>
-  );
-}

@@ -143,3 +143,25 @@ describe('createListener: live words and early finish', () => {
     expect(heard).toEqual(['hello Remi']);
   });
 });
+
+describe('speakAsync word beats', () => {
+  it('calls onWord for each spoken word boundary', async () => {
+    type U = { text: string; onend?: () => void; onboundary?: (e: { name: string }) => void };
+    const spoken: U[] = [];
+    const g = globalThis as Record<string, unknown>;
+    g.SpeechSynthesisUtterance = class { text: string; lang = ''; rate = 1; voice = null; constructor(t: string) { this.text = t; } };
+    g.window = { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (u: U) => spoken.push(u) } };
+    try {
+      let beats = 0;
+      const done = speakAsync('Hello Kamla', 'en-IN', 1000, { onWord: () => beats++ });
+      spoken[0].onboundary?.({ name: 'word' });
+      spoken[0].onboundary?.({ name: 'sentence' });
+      spoken[0].onboundary?.({ name: 'word' });
+      spoken[0].onend?.();
+      await done;
+      expect(beats).toBe(2);
+    } finally {
+      delete g.window; delete g.SpeechSynthesisUtterance;
+    }
+  });
+});

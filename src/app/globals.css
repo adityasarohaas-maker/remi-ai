@@ -51,6 +51,75 @@ body {
   animation: remi-breathe 3.2s ease-in-out infinite;
 }
 
+/* ── Remi's orb ─────────────────────────────────────────────────────────────
+   Garden colours, not the usual violet "AI" glow: a deep-green body turning slowly
+   around a marigold heart. State lives in data-state; each layer reacts to it. */
+.remi-orb {
+  --orb: clamp(120px, 26vmin, 260px);
+  position: relative;
+  width: var(--orb);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.remi-orb[data-size="lg"] { --orb: clamp(190px, 38vmin, 320px); }
+.remi-orb:focus-visible { outline-offset: 10px; }
+
+.remi-orb-breath, .remi-orb-breath > span { position: absolute; border-radius: 50%; }
+.remi-orb-breath { inset: 0; transition: transform 600ms ease, filter 600ms ease; }
+
+.remi-orb-glow {
+  inset: -22%;
+  background: radial-gradient(circle, rgb(242 193 78 / 0.38), rgb(47 93 80 / 0.12) 45%, transparent 68%);
+  filter: blur(14px);
+  transition: opacity 600ms ease;
+}
+.remi-orb-body {
+  inset: 0;
+  background: conic-gradient(from 20deg, var(--garden-deep), #4f8a74, var(--leaf), var(--marigold), #6e9c84, var(--garden-deep));
+  filter: blur(7px) saturate(1.05);
+  animation: orb-turn 22s linear infinite;
+}
+.remi-orb-sheen {
+  inset: 6%;
+  background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.55), transparent 42%),
+              radial-gradient(circle at 70% 78%, rgb(34 70 60 / 0.45), transparent 55%);
+  mix-blend-mode: soft-light;
+}
+.remi-orb-core {
+  inset: 30%;
+  background: radial-gradient(circle at 42% 38%, #fff7dc, var(--marigold) 52%, rgb(242 193 78 / 0) 74%);
+  filter: blur(3px);
+}
+
+@keyframes orb-turn { to { transform: rotate(1turn); } }
+@keyframes orb-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+@keyframes orb-think { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.01); } }
+
+.remi-orb[data-state="listening"] .remi-orb-breath { animation: orb-breathe 4.2s ease-in-out infinite; }
+.remi-orb[data-state="hearing"] .remi-orb-breath { transform: scale(1.09); }
+.remi-orb[data-state="hearing"] .remi-orb-body { animation-duration: 7s; }
+.remi-orb[data-state="hearing"] .remi-orb-glow { opacity: 1; }
+.remi-orb[data-state="thinking"] .remi-orb-breath { animation: orb-think 1.6s ease-in-out infinite; }
+.remi-orb[data-state="thinking"] .remi-orb-body { animation-duration: 2.8s; }
+.remi-orb[data-state="speaking"] .remi-orb-breath { transform: scale(1.04); }
+.remi-orb[data-state="speaking"] .remi-orb-body { animation-duration: 9s; }
+.remi-orb[data-state="off"] .remi-orb-glow,
+.remi-orb[data-state="listening"] .remi-orb-glow { opacity: 0.65; }
+.remi-orb[data-state="blocked"] .remi-orb-breath,
+.remi-orb[data-state="unsupported"] .remi-orb-breath { filter: grayscale(0.85) opacity(0.7); }
+.remi-orb[data-state="blocked"] .remi-orb-body,
+.remi-orb[data-state="unsupported"] .remi-orb-body { animation: none; }
+
+/* Remi's words arrive a sentence at a time. */
+@keyframes words-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.words-in { animation: words-in 420ms ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
-  .settle, .remi-dot { animation: none; }
+  .settle, .remi-dot, .words-in { animation: none; }
+  .remi-orb-breath, .remi-orb-body { animation: none !important; transition: none; }
 }

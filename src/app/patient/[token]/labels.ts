@@ -12,6 +12,8 @@ const EN = {
   remiSaid: 'Remi',
   intro: (name: string) => `Hello ${name}. I'm Remi, and I'm right here with you. Just say Remi whenever you want me.`,
   looking2: 'Let me have a look.', yourDay: 'Here is your day.',
+  remiHearing: 'Listening to you…', orbHint: 'Say “Remi”, or tap me, and talk.', orbTapHint: 'Tap me to talk.',
+  orbLabel: 'Talk to Remi', typeIt: 'Type', tapToBegin: 'Tap Remi to begin',
 };
 
 type Labels = typeof EN;
@@ -30,6 +32,8 @@ const HI: Labels = {
   remiSaid: 'रेमी',
   intro: (name: string) => `नमस्ते ${name}। मैं रेमी हूँ, मैं आपके साथ हूँ। जब भी मेरी ज़रूरत हो, बस रेमी बोलिए।`,
   looking2: 'मैं देखता हूँ।', yourDay: 'ये रहा आपका दिन।',
+  remiHearing: 'आपको सुन रहा है…', orbHint: '“रेमी” बोलिए, या मुझे छूकर बात कीजिए।', orbTapHint: 'बात करने के लिए मुझे छुएँ।',
+  orbLabel: 'रेमी से बात करें', typeIt: 'लिखें', tapToBegin: 'शुरू करने के लिए रेमी को छुएँ',
 };
 
 export function labelsFor(language: string): Labels {

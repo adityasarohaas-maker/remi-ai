@@ -36,12 +36,17 @@ export function speak(text: string, lang: string): void {
 }
 
 /** Speaks and resolves when done. Some browsers never fire onend, so a length-based timer also resolves it. */
-export function speakAsync(text: string, lang: string, maxMs = 3000 + text.length * 90): Promise<void> {
+export function speakAsync(
+  text: string, lang: string, maxMs = 3000 + text.length * 90,
+  o: { onWord?: () => void } = {},
+): Promise<void> {
   const u = utter(text, lang);
   if (!u) return Promise.resolve();
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, maxMs);
     u.onend = u.onerror = () => { clearTimeout(timer); resolve(); };
+    // Word beats (not every voice reports them) let the orb move with Remi's voice.
+    if (o.onWord) u.onboundary = (e) => { if (e.name === 'word') o.onWord?.(); };
     window.speechSynthesis.speak(u);
   });
 }
