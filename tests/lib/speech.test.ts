@@ -165,3 +165,36 @@ describe('speakAsync word beats', () => {
     }
   });
 });
+
+import { pickVoice } from '@/lib/speech';
+
+describe('pickVoice: a soft female voice', () => {
+  const v = (name: string, lang: string) => ({ name, lang });
+  const edge = [
+    v('Microsoft Prabhat Online (Natural) - English (India)', 'en-IN'),
+    v('Microsoft Neerja Online (Natural) - English (India)', 'en-IN'),
+    v('Microsoft Madhur Online (Natural) - Hindi (India)', 'hi-IN'),
+    v('Microsoft Swara Online (Natural) - Hindi (India)', 'hi-IN'),
+    v('Microsoft David - English (United States)', 'en-US'),
+  ];
+
+  it('prefers a known soft female voice for the language', () => {
+    expect(pickVoice(edge, 'en-IN')?.name).toContain('Neerja');
+    expect(pickVoice(edge, 'hi-IN')?.name).toContain('Swara');
+  });
+
+  it('never picks a known male voice when anything else exists', () => {
+    const list = [v('Microsoft Ravi - English (India)', 'en-IN'), v('Google UK English Female', 'en-GB')];
+    expect(pickVoice(list, 'en-IN')?.name).toBe('Google UK English Female');
+  });
+
+  it('falls back to any voice in the language, then the language family', () => {
+    expect(pickVoice([v('Some Voice', 'en-IN')], 'en-IN')?.name).toBe('Some Voice');
+    expect(pickVoice([v('Google US English', 'en-US')], 'en-IN')?.name).toBe('Google US English');
+    expect(pickVoice([], 'en-IN')).toBeNull();
+  });
+
+  it('finds Hindi voices whose language uses an underscore (Android)', () => {
+    expect(pickVoice([v('Hindi India', 'hi_IN')], 'hi-IN')?.name).toBe('Hindi India');
+  });
+});

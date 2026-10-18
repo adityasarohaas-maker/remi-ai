@@ -18,15 +18,37 @@ export function speechRecognitionCtor(win: unknown): (new () => SpeechRecognitio
   return ((w?.SpeechRecognition ?? w?.webkitSpeechRecognition) as (new () => SpeechRecognitionLike) | undefined) ?? null;
 }
 
+// Remi speaks with a soft female voice. Browsers don't say a voice's gender, so known names decide:
+// Neerja/Heera/Swara/Kalpana (Windows, Edge), Veena/Lekha (Apple), Google's female voices.
+const FEMALE = /neerja|heera|veena|swara|kalpana|lekha|aditi|raveena|samantha|zira|aria|jenny|sonia|libby|google हिन्दी|(?<![a-z])female/i;
+const MALE = /prabhat|hemant|ravi|madhur|rishi|david|mark|guy|ryan|george|daniel|(?<![a-z])male/i;
+
+/** The softest female voice for the language: exact language first, then its family; male voices last. */
+export function pickVoice<V extends { name: string; lang: string }>(voices: readonly V[], lang: string): V | null {
+  const norm = (l: string) => l.replace('_', '-').toLowerCase();
+  const want = norm(lang), family = want.split('-')[0];
+  const exact = voices.filter((v) => norm(v.lang) === want);
+  const kin = voices.filter((v) => norm(v.lang) !== want && norm(v.lang).startsWith(family));
+  const female = (v: V) => FEMALE.test(v.name);
+  const notMale = (v: V) => !MALE.test(v.name);
+  return exact.find(female) ?? kin.find(female) ?? exact.find(notMale) ?? kin.find(notMale) ?? exact[0] ?? kin[0] ?? null;
+}
+
+// Chrome fills the voice list a moment after load; asking early means Remi's first words already use it.
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener?.('voiceschanged', () => window.speechSynthesis.getVoices());
+}
+
 function utter(text: string, lang: string): SpeechSynthesisUtterance | null {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
   const synth = window.speechSynthesis;
   synth.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
-  u.rate = 0.9;
-  const voices = synth.getVoices();
-  u.voice = voices.find((v) => v.lang === lang) ?? voices.find((v) => v.lang.startsWith(lang.split('-')[0])) ?? null;
+  u.rate = 0.88;  // unhurried
+  u.pitch = 1.05; // a touch warmer
+  u.voice = pickVoice(synth.getVoices(), lang);
   return u;
 }
 
