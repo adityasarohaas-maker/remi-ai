@@ -21,7 +21,7 @@ function makeDeps(over: Partial<CoreDeps> = {}) {
     now: () => new Date('2026-10-17T07:40:00Z'),
     loadContext: async () => ctx,
     recentTurns: async () => [{ text: 'What day is it?', reply: 'It is Saturday.' }],
-    countRecentEvents: async () => 0,
+    takeRateToken: async () => true,
     chat,
     logEvent: async (_h, type, payload) => { logged.push({ type, payload }); },
     alert: async (_h, reason, detail) => { alerts.push({ reason, detail }); },
@@ -57,10 +57,32 @@ describe('handleTalk', () => {
     expect((logged[0].payload.text as string).length).toBe(MAX_INPUT);
   });
 
-  it('rate limits at 20 per minute', async () => {
-    const { deps, chat } = makeDeps({ countRecentEvents: async () => 20 });
-    expect((await handleTalk(deps, { householdId: 'h1', text: 'hi' })).status).toBe(429);
+  it('rate limits per household with a calm reply, without calling the model', async () => {
+    const { deps, chat } = makeDeps({ takeRateToken: async (_h, bucket) => bucket !== 'talk' });
+    const r = await handleTalk(deps, { householdId: 'h1', text: 'hi' });
+    expect(r.status).toBe(429);
+    expect(r.body.reply).toMatch(/^I'm right here/);
     expect(chat).not.toHaveBeenCalled();
+  });
+
+  it('rate limits per client too (public demo token)', async () => {
+    const { deps, chat } = makeDeps({ takeRateToken: async (_h, bucket) => !bucket.startsWith('talk-client:') });
+    expect((await handleTalk(deps, { householdId: 'h1', text: 'hi', clientKey: '1.2.3.4' })).status).toBe(429);
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it('still alerts the family on safety words when rate-limited (final review I4)', async () => {
+    const { deps, alerts } = makeDeps({ takeRateToken: async (_h, bucket) => bucket !== 'talk' });
+    const r = await handleTalk(deps, { householdId: 'h1', text: 'I fell and it hurts' });
+    expect(r.status).toBe(429);
+    expect(alerts[0]?.reason).toBe('safety');
+  });
+
+  it('dedupes repeated safety alerts but still answers', async () => {
+    const { deps, alerts } = makeDeps({ takeRateToken: async (_h, bucket) => bucket !== 'safety-alert' });
+    const r = await handleTalk(deps, { householdId: 'h1', text: 'I fell down' });
+    expect(r.status).toBe(200);
+    expect(alerts).toEqual([]);
   });
 
   it('falls back calmly when Nebius fails', async () => {

@@ -11,3 +11,20 @@ describe('speechRecognitionCtor', () => {
     expect(speechRecognitionCtor(undefined)).toBeNull();
   });
 });
+
+import { speechErrorAction } from '@/lib/speech';
+
+describe('speechErrorAction (final review C1)', () => {
+  it('switches to typing when speech exists but cannot work', () => {
+    for (const code of ['not-allowed', 'service-not-allowed', 'network', 'audio-capture', 'unsupported']) {
+      expect(speechErrorAction(code)).toBe('type');
+    }
+  });
+  it('asks again when nothing was heard', () => {
+    expect(speechErrorAction('no-speech')).toBe('again');
+    expect(speechErrorAction('')).toBe('again');
+  });
+  it('stays quiet when the listening was cancelled', () => {
+    expect(speechErrorAction('aborted')).toBe('quiet');
+  });
+});

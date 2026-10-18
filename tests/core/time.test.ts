@@ -33,3 +33,19 @@ describe('parseHHMM / partOfDay', () => {
     expect(partOfDay(22)).toBe('night');
   });
 });
+
+import { isValidTimeZone, safeTimeZone } from '@/core/time';
+
+describe('time-zone validation (final review C2)', () => {
+  it('accepts IANA zones and rejects free text', () => {
+    expect(isValidTimeZone('Asia/Kolkata')).toBe(true);
+    expect(isValidTimeZone('India')).toBe(false);
+    expect(isValidTimeZone('IST+5:30')).toBe(false);
+    expect(isValidTimeZone('')).toBe(false);
+  });
+  it('falls back to Asia/Kolkata for a bad stored zone so routes never crash', () => {
+    expect(safeTimeZone('Europe/London')).toBe('Europe/London');
+    expect(safeTimeZone('India')).toBe('Asia/Kolkata');
+    expect(() => localParts(new Date(), safeTimeZone('nonsense'))).not.toThrow();
+  });
+});

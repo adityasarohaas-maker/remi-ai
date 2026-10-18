@@ -1,5 +1,5 @@
 import { requireFamily } from '@/lib/household';
-import { localParts } from '@/core/time';
+import { localParts, safeTimeZone } from '@/core/time';
 import { WriteNoteButton } from './write-note';
 
 const REASON: Record<string, string> = {
@@ -17,7 +17,7 @@ type Convo = { text: string; reply: string; mood?: string; sensitiveTopic?: stri
 export default async function FamilyHome() {
   const { sb, householdId } = await requireFamily();
   const { data: h } = await sb.from('households').select('preferred_name, timezone').eq('id', householdId).single();
-  const tz = h?.timezone ?? 'Asia/Kolkata';
+  const tz = safeTimeZone(h?.timezone);
   const today = localParts(new Date(), tz).day;
   const [{ data: alerts }, { data: digest }, { data: talk }] = await Promise.all([
     sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'alert').order('created_at', { ascending: false }).limit(10),

@@ -4,7 +4,9 @@ import { hashDeviceToken } from '@/lib/device-token';
 import { demoMorningTimes } from '@/core/demo-times';
 import embeddings from '@/demo/embeddings.json';
 
-export const DEMO_HOUSEHOLD_ID = '00000000-0000-4000-8000-00000000d3a0';
+import { DEMO_HOUSEHOLD_ID } from '@/core/demo';
+
+export { DEMO_HOUSEHOLD_ID };
 const TZ = 'Asia/Kolkata';
 type DemoEmbedding = { person: string; photo_path: string; embedding: number[] };
 

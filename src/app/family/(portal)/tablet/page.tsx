@@ -1,6 +1,7 @@
 import { requireFamily } from '@/lib/household';
 import { revokeDevice } from './actions';
 import { NewDevice } from './new-device';
+import { isDemoHousehold } from '@/core/demo';
 
 export default async function TabletPage() {
   const { sb, householdId } = await requireFamily();
@@ -18,7 +19,7 @@ export default async function TabletPage() {
               <span className="ml-2 text-sm text-stone-500">since {new Date(d.created_at).toLocaleDateString('en-IN')}</span>
               {d.revoked_at && <span className="ml-2 rounded bg-stone-200 px-2 text-xs">switched off</span>}
             </span>
-            {!d.revoked_at && (
+            {!d.revoked_at && !isDemoHousehold(householdId) && (
               <form action={revokeDevice}>
                 <input type="hidden" name="id" value={d.id} />
                 <button className="text-sm text-red-700 underline">Switch off</button>

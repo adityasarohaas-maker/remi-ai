@@ -41,3 +41,11 @@ export function listenOnce(lang: string): Promise<string> {
     rec.start();
   });
 }
+
+// What the Talk screen should do when listening fails. Speech that exists but can never work
+// (blocked mic, Siri/Dictation off on iPad, no speech service) must switch to typing.
+export function speechErrorAction(code: string): 'type' | 'again' | 'quiet' {
+  if (['not-allowed', 'service-not-allowed', 'network', 'audio-capture', 'unsupported', 'language-not-supported'].includes(code)) return 'type';
+  if (code === 'aborted') return 'quiet';
+  return 'again';
+}

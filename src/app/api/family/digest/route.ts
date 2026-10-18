@@ -1,5 +1,6 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { generateDigest } from '@/lib/digest';
+import { supabaseDeps } from '@/lib/deps';
 
 export const maxDuration = 60;
 
@@ -9,6 +10,9 @@ export async function POST() {
   if (!user) return Response.json({ error: 'sign in' }, { status: 401 });
   const { data: m } = await sb.from('household_members').select('household_id').eq('user_id', user.id).maybeSingle();
   if (!m) return Response.json({ error: 'no household' }, { status: 404 });
+  if (!(await supabaseDeps().takeRateToken(m.household_id, 'digest', 2, 600))) {
+    return Response.json({ error: 'A note was just written. You can ask again in a few minutes.' }, { status: 429 });
+  }
   try {
     return Response.json(await generateDigest(m.household_id));
   } catch (e) {

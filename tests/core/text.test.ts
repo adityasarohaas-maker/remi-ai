@@ -12,3 +12,10 @@ describe('stripReasoning', () => {
     expect(stripReasoning('  Good morning.  ')).toBe('Good morning.');
   });
 });
+
+describe('stripReasoning — truncated reasoning (final review I1)', () => {
+  it('drops an unclosed think block instead of speaking it', () => {
+    expect(stripReasoning('<think>The user asks what day it is, so I')).toBe('');
+    expect(stripReasoning('Hello.<think>more reasoning')).toBe('Hello.');
+  });
+});

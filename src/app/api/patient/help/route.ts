@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
   const deps = supabaseDeps();
   const now = deps.now();
-  if ((await deps.countRecentEvents(householdId, 'alert', new Date(now.getTime() - 60_000))) >= 5) {
+  if (!(await deps.takeRateToken(householdId, 'help', 5, 60))) {
     return Response.json({ error: 'too many requests' }, { status: 429 });
   }
   const { household: h } = await deps.loadContext(householdId, now);

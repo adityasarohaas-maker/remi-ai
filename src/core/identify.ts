@@ -9,7 +9,7 @@ export async function handleIdentify(deps: CoreDeps, input: { householdId: strin
   if (!isValidEmbedding(input.embedding)) return { status: 400, body: { error: 'bad embedding' } };
   const { householdId, embedding } = input;
   const now = deps.now();
-  if ((await deps.countRecentEvents(householdId, 'face_query', new Date(now.getTime() - 60_000))) >= RATE_PER_MIN) {
+  if (!(await deps.takeRateToken(householdId, 'identify', RATE_PER_MIN, 60))) {
     return { status: 429, body: { error: 'too many requests' } };
   }
   const [ctx, gallery] = await Promise.all([deps.loadContext(householdId, now), deps.faceGallery(householdId)]);

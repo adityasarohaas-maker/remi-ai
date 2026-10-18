@@ -48,3 +48,20 @@ export function parseHHMM(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
+
+export const DEFAULT_TIME_ZONE = 'Asia/Kolkata';
+
+export function isValidTimeZone(tz: string): boolean {
+  if (!tz) return false;
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// A bad stored zone must never take the tablet down.
+export function safeTimeZone(tz: string | null | undefined): string {
+  return tz && isValidTimeZone(tz) ? tz : DEFAULT_TIME_ZONE;
+}

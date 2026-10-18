@@ -22,7 +22,7 @@ function getClient(): OpenAI {
 
 export async function chatText(
   messages: ChatMessage[],
-  opts: { model: string; maxTokens?: number; temperature?: number; timeoutMs?: number },
+  opts: { model: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxRetries?: number },
 ): Promise<string> {
   const extra = process.env.NEBIUS_DISABLE_THINKING === '1'
     ? { chat_template_kwargs: { enable_thinking: false } }
@@ -35,7 +35,7 @@ export async function chatText(
       temperature: opts.temperature ?? 0.4,
       ...extra,
     } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
-    { timeout: opts.timeoutMs ?? 20_000 },
+    { timeout: opts.timeoutMs ?? 20_000, ...(opts.maxRetries !== undefined ? { maxRetries: opts.maxRetries } : {}) },
   );
   return stripReasoning(res.choices[0]?.message?.content ?? '');
 }

@@ -14,7 +14,7 @@ function deps(over: Partial<CoreDeps> = {}): CoreDeps {
       routine: [], doneIds: [], guidance: [],
     }),
     recentTurns: async () => [],
-    countRecentEvents: async () => 0,
+    takeRateToken: async () => true,
     chat: vi.fn(async () => "That's Rohan, your grandson. Ask him about his cricket match!"),
     logEvent: vi.fn(async () => {}),
     alert: async () => {},
@@ -43,6 +43,6 @@ describe('handleIdentify', () => {
     expect((await handleIdentify(deps(), { householdId: 'h1', embedding: [1, 2] })).status).toBe(400);
   });
   it('rate limits', async () => {
-    expect((await handleIdentify(deps({ countRecentEvents: async () => 20 }), { householdId: 'h1', embedding: emb(0) })).status).toBe(429);
+    expect((await handleIdentify(deps({ takeRateToken: async () => false }), { householdId: 'h1', embedding: emb(0) })).status).toBe(429);
   });
 });

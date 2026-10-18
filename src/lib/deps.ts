@@ -2,7 +2,7 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { chatText, MODELS } from '@/lib/nebius';
 import { sendAlert } from '@/lib/alerts';
-import { localParts, dayRangeUtc } from '@/core/time';
+import { localParts, dayRangeUtc, safeTimeZone } from '@/core/time';
 import type { CoreDeps } from '@/core/talk';
 import type { HouseholdContext, RoutineItem, Approach } from '@/core/types';
 
@@ -19,7 +19,7 @@ export function supabaseDeps(): CoreDeps {
         db.from('sensitive_guidance').select('id, topic, trigger_words, approach, family_script, caller:people(name)').eq('household_id', householdId),
       ]);
       if (h.error) throw h.error;
-      const tz = h.data.timezone as string;
+      const tz = safeTimeZone(h.data.timezone as string);
       const { start, end } = dayRangeUtc(localParts(now, tz).day, tz);
       const done = await db.from('events').select('payload').eq('household_id', householdId).eq('type', 'reminder_done')
         .gte('created_at', start.toISOString()).lt('created_at', end.toISOString());
@@ -47,13 +47,19 @@ export function supabaseDeps(): CoreDeps {
       return (data ?? []).map((e) => e.payload as { text: string; reply: string });
     },
 
-    async countRecentEvents(householdId, type, since) {
-      const { count } = await db.from('events').select('id', { count: 'exact', head: true })
-        .eq('household_id', householdId).eq('type', type).gte('created_at', since.toISOString());
-      return count ?? 0;
+    async takeRateToken(householdId, bucket, limit, windowSeconds) {
+      const { data, error } = await db.rpc('take_rate_token', {
+        p_household: householdId, p_bucket: bucket, p_limit: limit, p_window_seconds: windowSeconds,
+      });
+      if (error) {
+        console.error('takeRateToken failed', error);
+        return false; // fail closed: never let a broken limiter turn into unlimited model spend
+      }
+      return data === true;
     },
 
-    chat: (messages, opts) => chatText(messages, { model: MODELS.chat(), ...opts }),
+    // Live replies: one attempt, short budget — the patient gets the calm fallback instead of a long wait.
+    chat: (messages, opts) => chatText(messages, { model: MODELS.chat(), timeoutMs: 10_000, maxRetries: 0, ...opts }),
 
     async logEvent(householdId, type, payload) {
       const { error } = await db.from('events').insert({ household_id: householdId, type, payload });
