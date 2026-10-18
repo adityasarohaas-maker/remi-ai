@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { speak } from '@/lib/speech';
 import { labelsFor } from './labels';
 import { useRemi, type RemiPerson } from './use-remi';
-import { RemiOrb } from './remi-orb';
+import { Kodi } from './kodi/kodi';
+import { isNightTheme } from '@/core/kodi';
 import { RemiStatusLine } from './remi-status';
 import { Home } from './screens/home';
 import { Talk } from './screens/talk';
@@ -13,7 +14,9 @@ import { Today, type TodayData } from './screens/today';
 export type Api = (path: string, init?: RequestInit) => Promise<Response>;
 type Screen = 'home' | 'talk' | 'face' | 'today';
 
-export function PatientApp({ token, preferredName, language, people }: { token: string; preferredName: string; language: string; people: RemiPerson[] }) {
+export function PatientApp({ token, preferredName, language, people, theme }: {
+  token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night';
+}) {
   const t = labelsFor(language);
   const [screen, setScreen] = useState<Screen>('home');
   const [autoLook, setAutoLook] = useState(false);
@@ -45,6 +48,8 @@ export function PatientApp({ token, preferredName, language, people }: { token: 
     await api('reminder', { method: 'POST', body: JSON.stringify({ routineItemId: id }) });
     refresh();
   }, [api, refresh]);
+  // until the server answers, guess day or night from the tablet's own clock (it sits in her home)
+  const [guessNight] = useState(() => { const d = new Date(); return isNightTheme(d.getHours() * 60 + d.getMinutes()); });
 
   const go = useCallback((s: Screen, opts?: { autoLook?: boolean }) => {
     setAutoLook(Boolean(opts?.autoLook));
@@ -69,30 +74,38 @@ export function PatientApp({ token, preferredName, language, people }: { token: 
   useEffect(() => { hold(screen === 'talk'); }, [screen, hold]);
 
   const say = remi.active ? remi.say : undefined;
+  const night = theme ? theme === 'night' : today?.now.night ?? guessNight;
+  // a long quiet spell at night makes Kodi drowsy; anything said wakes it
+  const kodi = {
+    emotion: night && remi.idleLong && remi.status === 'listening' ? 'sleepy' as const : remi.emotion,
+    cue: remi.cue,
+    night,
+  };
+  const tapDone = (id: string) => { remi.feel({ event: 'reminder-done' }); return markDone(id); };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-paper text-ink">
+    <div className="tablet flex h-dvh min-h-[34rem] flex-col overflow-hidden" data-theme={night ? 'night' : 'day'}>
       {remi.status === 'off' && !skipped && (
-        <div className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-8 bg-paper px-6 text-center">
-          <RemiOrb status="off" size="lg" label={t.startRemi} onPress={remi.start} />
-          <div>
-            <p className="text-4xl font-semibold text-garden-deep sm:text-5xl">{t.tapToBegin}</p>
+        <div className="tablet fixed inset-0 z-20 flex flex-col items-center justify-center gap-6 px-6 py-8 text-center" data-theme={night ? 'night' : 'day'}>
+          <Kodi className="min-h-0 w-full max-w-lg flex-1" state="listening" emotion="happy" cue={null} night={night} label={t.startRemi} onPress={remi.start} />
+          <div className="font-display">
+            <p className="text-4xl font-extrabold tracking-tight sm:text-5xl">{t.tapToBegin}</p>
             <p className="mt-3 max-w-xl text-2xl text-ink/75 sm:text-3xl">{t.startHint}</p>
           </div>
           <button onClick={() => setSkipped(true)} className="rounded-xl px-2 text-xl text-ink/70 underline underline-offset-4">{t.notNow}</button>
         </div>
       )}
       {due && (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-4 bg-marigold px-6 py-5 text-2xl text-ink sm:px-10 sm:text-3xl">
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-4 bg-marigold px-6 py-5 text-2xl text-[#2b2340] sm:px-10 sm:text-3xl">
           <span className="max-w-3xl">{due.spokenMessage ?? due.label}</span>
-          <button onClick={() => markDone(due.id)} className="min-h-16 rounded-2xl bg-ink px-8 text-paper">{t.done}</button>
+          <button onClick={() => tapDone(due.id)} className="min-h-16 rounded-2xl bg-[#2b2340] px-8 font-display font-bold text-white">{t.done}</button>
         </div>
       )}
       {remi.active && screen !== 'home' && <RemiStatusLine status={remi.status} language={language} className="px-6 pt-5 sm:px-12" />}
-      {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} />}
+      {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} kodi={kodi} />}
       {screen === 'talk' && <Talk api={api} language={language} back={() => go('home')} />}
       {screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} />}
-      {screen === 'today' && <Today today={today} language={language} markDone={markDone} back={() => go('home')} />}
+      {screen === 'today' && <Today today={today} language={language} markDone={tapDone} back={() => go('home')} />}
     </div>
   );
 }

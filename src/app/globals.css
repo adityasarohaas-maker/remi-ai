@@ -1,13 +1,31 @@
 @import "tailwindcss";
 
+/* Lavender light theme, after the reference design. Token names are the original ones
+   (garden, leaf, marigold) so every page re-themes from here. */
 :root {
-  --paper: #eef2ea;      /* sage mist — calm, not clinical white */
-  --ink: #1e2b24;        /* forest ink, ~13:1 on paper */
-  --garden: #2f5d50;     /* primary actions */
-  --garden-deep: #22463c;
-  --marigold: #f2c14e;   /* reminders */
-  --leaf: #dce5d6;       /* quiet surfaces */
+  --paper: #f7f4ff;      /* lavender mist */
+  --ink: #2b2340;        /* deep plum ink, ~14:1 on paper */
+  --garden: #6a4fd6;     /* primary actions: violet */
+  --garden-deep: #4b33ad;
+  --marigold: #ffc56b;   /* reminders: warm, apart from the violet */
+  --leaf: #ece6ff;       /* quiet surfaces */
+  --surface: #ffffff;    /* cards and inputs */
   --alarm: #b3261e;      /* help only */
+  --ring: rgb(106 79 214 / 0.14);
+  --stage: radial-gradient(ellipse 80% 70% at 50% 42%, #ffffff 0%, #f3eeff 52%, #e4dbff 100%);
+}
+
+/* The tablet at night (7 pm to 6 am in her home): deep violet, Kodi glows. */
+.tablet[data-theme="night"] {
+  --paper: #120c26;
+  --ink: #f3efff;
+  --garden: #b9a6ee;
+  --garden-deep: #d7c9ff;
+  --leaf: rgb(185 166 238 / 0.14);
+  --surface: #1f1640;
+  --alarm: #ff8a80;
+  --ring: rgb(185 166 238 / 0.22);
+  --stage: radial-gradient(ellipse 90% 75% at 62% 70%, #3a237a 0%, #1a1036 45%, #08060f 100%);
 }
 
 @theme inline {
@@ -17,14 +35,22 @@
   --color-garden-deep: var(--garden-deep);
   --color-marigold: var(--marigold);
   --color-leaf: var(--leaf);
+  --color-surface: var(--surface);
   --color-alarm: var(--alarm);
   --font-sans: var(--font-atkinson), var(--font-devanagari), system-ui, sans-serif;
+  --font-display: var(--font-jakarta), var(--font-devanagari), system-ui, sans-serif;
 }
 
 body {
-  background: #fafaf7;
+  background: #fbfaff;
   color: var(--ink);
   font-family: var(--font-sans);
+}
+
+.tablet {
+  background: var(--stage);
+  color: var(--ink);
+  transition: background 1.2s ease, color 0.8s ease;
 }
 
 :focus-visible {
@@ -51,69 +77,8 @@ body {
   animation: remi-breathe 3.2s ease-in-out infinite;
 }
 
-/* ── Remi's orb ─────────────────────────────────────────────────────────────
-   Garden colours, not the usual violet "AI" glow: a deep-green body turning slowly
-   around a marigold heart. State lives in data-state; each layer reacts to it. */
-.remi-orb {
-  --orb: clamp(120px, 26vmin, 260px);
-  position: relative;
-  width: var(--orb);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.remi-orb[data-size="lg"] { --orb: clamp(190px, 38vmin, 320px); }
-.remi-orb:focus-visible { outline-offset: 10px; }
-
-.remi-orb-breath, .remi-orb-breath > span { position: absolute; border-radius: 50%; }
-.remi-orb-breath { inset: 0; transition: transform 600ms ease, filter 600ms ease; }
-
-.remi-orb-glow {
-  inset: -22%;
-  background: radial-gradient(circle, rgb(242 193 78 / 0.38), rgb(47 93 80 / 0.12) 45%, transparent 68%);
-  filter: blur(14px);
-  transition: opacity 600ms ease;
-}
-.remi-orb-body {
-  inset: 0;
-  background: conic-gradient(from 20deg, var(--garden-deep), #4f8a74, var(--leaf), var(--marigold), #6e9c84, var(--garden-deep));
-  filter: blur(7px) saturate(1.05);
-  animation: orb-turn 22s linear infinite;
-}
-.remi-orb-sheen {
-  inset: 6%;
-  background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.55), transparent 42%),
-              radial-gradient(circle at 70% 78%, rgb(34 70 60 / 0.45), transparent 55%);
-  mix-blend-mode: soft-light;
-}
-.remi-orb-core {
-  inset: 30%;
-  background: radial-gradient(circle at 42% 38%, #fff7dc, var(--marigold) 52%, rgb(242 193 78 / 0) 74%);
-  filter: blur(3px);
-}
-
-@keyframes orb-turn { to { transform: rotate(1turn); } }
-@keyframes orb-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
-@keyframes orb-think { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.01); } }
-
-.remi-orb[data-state="listening"] .remi-orb-breath { animation: orb-breathe 4.2s ease-in-out infinite; }
-.remi-orb[data-state="hearing"] .remi-orb-breath { transform: scale(1.09); }
-.remi-orb[data-state="hearing"] .remi-orb-body { animation-duration: 7s; }
-.remi-orb[data-state="hearing"] .remi-orb-glow { opacity: 1; }
-.remi-orb[data-state="thinking"] .remi-orb-breath { animation: orb-think 1.6s ease-in-out infinite; }
-.remi-orb[data-state="thinking"] .remi-orb-body { animation-duration: 2.8s; }
-.remi-orb[data-state="speaking"] .remi-orb-breath { transform: scale(1.04); }
-.remi-orb[data-state="speaking"] .remi-orb-body { animation-duration: 9s; }
-.remi-orb[data-state="off"] .remi-orb-glow,
-.remi-orb[data-state="listening"] .remi-orb-glow { opacity: 0.65; }
-.remi-orb[data-state="blocked"] .remi-orb-breath,
-.remi-orb[data-state="unsupported"] .remi-orb-breath { filter: grayscale(0.85) opacity(0.7); }
-.remi-orb[data-state="blocked"] .remi-orb-body,
-.remi-orb[data-state="unsupported"] .remi-orb-body { animation: none; }
+.kodi { -webkit-tap-highlight-color: transparent; border: 0; padding: 0; background: transparent; }
+.kodi:focus-visible { outline-offset: -12px; border-radius: 40px; }
 
 /* Remi's words arrive a sentence at a time. */
 @keyframes words-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -121,5 +86,4 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .settle, .remi-dot, .words-in { animation: none; }
-  .remi-orb-breath, .remi-orb-body { animation: none !important; transition: none; }
 }

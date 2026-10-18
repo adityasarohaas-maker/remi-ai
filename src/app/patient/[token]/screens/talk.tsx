@@ -69,7 +69,7 @@ export function Talk({ api, language, back }: { api: Api; language: string; back
       {mode === 'type' && (
         <form onSubmit={(e) => { e.preventDefault(); send(typed); setTyped(''); }} className="flex flex-col gap-4">
           <label htmlFor="say" className="text-3xl">{t.typeHere}</label>
-          <input id="say" value={typed} onChange={(e) => setTyped(e.target.value)} maxLength={500} autoComplete="off" className="rounded-2xl border-4 border-leaf bg-white px-5 py-4 text-3xl" />
+          <input id="say" value={typed} onChange={(e) => setTyped(e.target.value)} maxLength={500} autoComplete="off" className="rounded-2xl border-4 border-leaf bg-surface px-5 py-4 text-3xl" />
           <button disabled={state !== 'idle'} className="min-h-24 rounded-3xl bg-garden text-3xl font-semibold text-paper disabled:opacity-70">
             {state === 'thinking' ? t.thinking : t.send}
           </button>

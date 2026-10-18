@@ -5,6 +5,7 @@ import { classifyHeard, isDoneReply, shouldCheckIn, checkInLine, voiceCommand } 
 import { speakableText, takeSentences } from '@/core/stream-speech';
 import { detectSafetyWords } from '@/core/safety';
 import { wakeReply, wellDoneMessage } from '@/core/messages';
+import { kodiFeeling, type KodiCue, type KodiEmotion, type KodiEvent, type KodiGesture } from '@/core/kodi';
 import { labelsFor } from './labels';
 import type { Api } from './patient-app';
 
@@ -31,6 +32,16 @@ export function useRemi(o: {
 }) {
   const t = labelsFor(o.language);
   const [status, setStatus] = useState<RemiStatus>('off');
+  // Kodi's feeling follows Avni's mood and what just happened; cues are one-off gestures
+  const [emotion, setEmotion] = useState<KodiEmotion>('calm');
+  const [cue, setCue] = useState<KodiCue>(null);
+  const [idleLong, setIdleLong] = useState(false);
+  const gesture = useCallback((g: KodiGesture) => setCue({ gesture: g, key: Date.now() + Math.random() }), []);
+  const feel = useCallback((i: { mood?: string; reply?: string; event?: KodiEvent }) => {
+    const f = kodiFeeling(i);
+    setEmotion(f.emotion);
+    if (f.gesture) gesture(f.gesture);
+  }, [gesture]);
   const [live, setLive] = useState('');     // her words while she is speaking
   const [heard, setHeard] = useState('');   // her last finished words that Remi answered
   const [reply, setReply] = useState('');   // Remi's words, growing as they stream in
@@ -81,7 +92,7 @@ export function useRemi(o: {
   const say = useCallback((text: string) => enqueue(text, true), [enqueue]);
 
   /** Sends her words; speaks Remi's reply sentence by sentence as it streams in. Returns what Remi said. */
-  const converse = useCallback(async (text: string, mode: 'addressed' | 'followup' | 'overheard'): Promise<string> => {
+  const converse = useCallback(async (text: string, mode: 'addressed' | 'followup' | 'overheard'): Promise<{ text: string; mood?: string }> => {
     const res = await latest.current.api('talk', {
       method: 'POST',
       headers: { accept: 'application/x-ndjson' },
@@ -91,12 +102,12 @@ export function useRemi(o: {
       const data = await res.json().catch(() => ({}));
       const answer = typeof data.reply === 'string' ? data.reply : '';
       if (answer) await say(answer);
-      return answer;
+      return { text: answer, mood: data.mood };
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '', raw = '', spokenUpTo = 0, shown = '';
-    let final: { reply?: string | null } | null = null;
+    let final: { reply?: string | null; mood?: string } | null = null;
     const pump = (done: boolean) => {
       const speakable = speakableText(raw, done);
       if (speakable && speakable !== shown) { shown = speakable; setReply(speakable); }
@@ -113,16 +124,16 @@ export function useRemi(o: {
         const line = buffer.slice(0, nl);
         buffer = buffer.slice(nl + 1);
         if (!line.trim()) continue;
-        const msg = JSON.parse(line) as { delta?: string; done?: boolean; reply?: string | null };
+        const msg = JSON.parse(line) as { delta?: string; done?: boolean; reply?: string | null; mood?: string };
         if (msg.delta) { raw += msg.delta; pump(false); }
         if (msg.done) final = msg;
       }
     }
-    if (!final || final.reply == null) return shown; // silence (SKIP), or a stream that broke
-    if (!raw) { await say(final.reply); return final.reply; } // a reply without the model (fallback, clock, family words)
+    if (!final || final.reply == null) return { text: shown }; // silence (SKIP), or a stream that broke
+    if (!raw) { await say(final.reply); return { text: final.reply, mood: final.mood }; } // fallback, clock, family words
     pump(true);
     await queue.current;
-    return shown;
+    return { text: shown, mood: final.mood };
   }, [enqueue, say]);
 
   const handle = useCallback(async (raw: string) => {
@@ -136,6 +147,7 @@ export function useRemi(o: {
       pendingReminder.current = null;
       setHeard(raw);
       await markDone(pending.id);
+      feel({ event: 'reminder-done' });
       await say(wellDoneMessage(language, preferredName));
       return;
     }
@@ -146,7 +158,7 @@ export function useRemi(o: {
       if (h.kind === 'followup' || h.kind === 'overheard') h = { kind: 'addressed', text: h.text };
     }
     if (h.kind === 'ignore') { idle(); return; }
-    if (h.kind === 'wake') { setHeard(raw); await say(wakeReply(language, preferredName)); return; }
+    if (h.kind === 'wake') { setHeard(raw); gesture('hop'); await say(wakeReply(language, preferredName)); return; }
 
     if (h.kind === 'addressed' || h.kind === 'followup') {
       const command = voiceCommand(h.text);
@@ -165,8 +177,10 @@ export function useRemi(o: {
     const previous = { you: heard, remi: reply };
     if (h.kind === 'addressed') { setHeard(h.text); setReply(''); setStatus('thinking'); }
     try {
-      const answer = await converse(h.text, h.kind);
+      const result = await converse(h.text, h.kind);
+      const answer = result.text;
       if (answer) {
+        feel({ mood: result.mood, reply: answer });
         if (h.kind !== 'addressed') setHeard(h.text);
         if (previous.remi) setTurns((ts) => [...ts, previous].slice(-3));
       } else if (h.kind === 'addressed') {
@@ -178,7 +192,7 @@ export function useRemi(o: {
       busy.current = false;
       if (!speaking.current) idle();
     }
-  }, [say, converse, idle, t, heard, reply]);
+  }, [say, converse, idle, t, heard, reply, feel, gesture]);
 
   const handleRef = useRef(handle);
   useEffect(() => { handleRef.current = handle; }, [handle]);
@@ -207,8 +221,9 @@ export function useRemi(o: {
     // ?quiet=<minutes> shortens the check-in wait, for demos.
     const quiet = Number(new URLSearchParams(window.location.search).get('quiet'));
     checkInAfterMs.current = quiet > 0 ? quiet * 60_000 : undefined;
+    feel({ event: 'greeting' });
     await say(t.intro(latest.current.preferredName));
-  }, [say, t]);
+  }, [say, t, feel]);
 
   /** She tapped the orb: whatever she says next is for Remi, no name needed. */
   const listenNow = useCallback(() => {
@@ -241,21 +256,24 @@ export function useRemi(o: {
       const now = Date.now();
       const d = new Date(now);
       const { language, preferredName, people } = latest.current;
+      setIdleLong(now - lastActivity.current > 5 * 60_000); // a long quiet spell: Kodi gets drowsy at night
       if (held.current || speaking.current || busy.current) return;
       if (!shouldCheckIn({
         nowMs: now, lastActivityMs: lastActivity.current, lastCheckInMs: lastCheckIn.current,
         minutesOfDay: d.getHours() * 60 + d.getMinutes(), afterMs: checkInAfterMs.current,
       })) return;
       lastCheckIn.current = now;
+      feel({ event: 'greeting' });
       say(checkInLine(language, preferredName, people, checkIns.current++));
     }, 15_000);
     return () => clearInterval(id);
-  }, [status, say]);
+  }, [status, say, feel]);
 
   useEffect(() => () => listener.current?.stop(), []);
 
   return {
     status, live, heard, reply, turns, start, say, announce, hold, listenNow,
     active: status !== 'off',
+    emotion, cue, idleLong, feel, gesture,
   };
 }

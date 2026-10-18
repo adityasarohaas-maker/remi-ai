@@ -2,7 +2,7 @@
 import { labelsFor } from '../labels';
 
 export type TodayData = {
-  now: { weekday: string; prettyDate: string; prettyTime: string; partOfDay: string };
+  now: { weekday: string; prettyDate: string; prettyTime: string; partOfDay: string; night?: boolean };
   items: { id: string; label: string; kind: string; minutes: number; state: 'upcoming' | 'due' | 'done' | 'missed'; spokenMessage: string | null }[];
 };
 
@@ -15,8 +15,8 @@ function clock(minutes: number): string {
 const BADGE: Record<TodayData['items'][number]['state'], string> = {
   done: 'bg-leaf text-garden-deep',
   due: 'bg-marigold text-ink',
-  missed: 'bg-white text-ink border-2 border-ink/40',
-  upcoming: 'bg-white/60 text-ink/70',
+  missed: 'bg-surface text-ink border-2 border-ink/40',
+  upcoming: 'bg-surface/60 text-ink/70',
 };
 
 export function Today({ today, language, markDone, back }: { today: TodayData | null; language: string; markDone: (id: string) => void; back: () => void }) {
@@ -27,7 +27,7 @@ export function Today({ today, language, markDone, back }: { today: TodayData | 
       {today && <h1 className="text-5xl font-bold text-garden-deep">{today.now.weekday}</h1>}
       <ol className="flex flex-col gap-3">
         {(today?.items ?? []).map((item) => (
-          <li key={item.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-3xl bg-white px-6 py-5">
+          <li key={item.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-3xl bg-surface px-6 py-5">
             <span className="w-36 text-3xl tabular-nums text-ink/80">{clock(item.minutes)}</span>
             <span className="grow text-3xl font-semibold">{item.label}</span>
             <span className={`rounded-full px-5 py-2 text-2xl ${BADGE[item.state]}`}>{t.state[item.state]}</span>

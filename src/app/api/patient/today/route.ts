@@ -2,6 +2,7 @@ import { requireDevice } from '@/lib/household';
 import { supabaseDeps } from '@/lib/deps';
 import { localParts } from '@/core/time';
 import { reminderStates } from '@/core/reminders';
+import { isNightTheme } from '@/core/kodi';
 
 export async function GET(req: Request) {
   const householdId = await requireDevice(req);
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
   const ctx = await deps.loadContext(householdId, now);
   const local = localParts(now, ctx.household.timezone);
   return Response.json({
-    now: { weekday: local.weekday, prettyDate: local.prettyDate, prettyTime: local.prettyTime, partOfDay: local.partOfDay },
+    now: { weekday: local.weekday, prettyDate: local.prettyDate, prettyTime: local.prettyTime, partOfDay: local.partOfDay, night: isNightTheme(local.minutes) },
     items: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
   });
 }
