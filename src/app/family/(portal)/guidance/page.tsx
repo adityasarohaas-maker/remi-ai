@@ -30,7 +30,7 @@ export default async function GuidancePage() {
             <div className="mt-2 flex flex-wrap gap-1">
               {(g.trigger_words as string[]).map((w) => <span key={w} className="rounded bg-stone-100 px-2 py-0.5 text-sm">{w}</span>)}
             </div>
-            <blockquote className="mt-3 border-l-4 border-teal-700 pl-3 text-stone-800">“{g.family_script}”</blockquote>
+            <blockquote className="mt-3 border-l-4 border-garden pl-3 text-stone-800">“{g.family_script}”</blockquote>
             <form action={deleteGuidance} className="mt-3">
               <input type="hidden" name="id" value={g.id} />
               <button className="text-sm text-red-700 underline">Remove</button>
@@ -59,7 +59,7 @@ export default async function GuidancePage() {
             {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name} ({p.relation})</option>)}
           </select>
         </label>
-        <button className="rounded-lg bg-teal-800 px-4 py-2 text-white">Add</button>
+        <button className="rounded-lg bg-garden px-4 py-2 text-white">Add</button>
       </form>
     </section>
   );

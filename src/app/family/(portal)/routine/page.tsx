@@ -50,7 +50,7 @@ export default async function RoutinePage() {
         </select>
         <input name="label" required placeholder="e.g. BP tablet" className="rounded-lg border px-3 py-2" />
         <input name="spoken_message" placeholder={`${name}, it's time for your blood-pressure tablet with a glass of water.`} className="rounded-lg border px-3 py-2 sm:col-span-3" />
-        <button className="justify-self-start rounded-lg bg-teal-800 px-4 py-2 text-white">Add</button>
+        <button className="justify-self-start rounded-lg bg-garden px-4 py-2 text-white">Add</button>
       </form>
     </section>
   );

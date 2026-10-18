@@ -37,7 +37,7 @@ export default async function PeoplePage() {
         <input name="relation" required placeholder="Relation to them, e.g. grandson" className="w-full rounded-lg border px-3 py-2" />
         <textarea name="notes" rows={3} placeholder="Something to talk about, e.g. loves cricket" className="w-full rounded-lg border px-3 py-2" />
         <label className="flex items-center gap-2"><input type="checkbox" name="is_deceased" /> Has passed away</label>
-        <button className="rounded-lg bg-teal-800 px-4 py-2 text-white">Add</button>
+        <button className="rounded-lg bg-garden px-4 py-2 text-white">Add</button>
       </form>
     </section>
   );

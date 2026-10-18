@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #eef2ea;      /* sage mist — calm, not clinical white */
+  --ink: #1e2b24;        /* forest ink, ~13:1 on paper */
+  --garden: #2f5d50;     /* primary actions */
+  --garden-deep: #22463c;
+  --marigold: #f2c14e;   /* reminders */
+  --leaf: #dce5d6;       /* quiet surfaces */
+  --alarm: #b3261e;      /* help only */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-garden: var(--garden);
+  --color-garden-deep: var(--garden-deep);
+  --color-marigold: var(--marigold);
+  --color-leaf: var(--leaf);
+  --color-alarm: var(--alarm);
+  --font-sans: var(--font-atkinson), var(--font-devanagari), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #fafaf7;
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 4px solid var(--marigold);
+  outline-offset: 3px;
+}
+
+@keyframes settle {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.settle {
+  animation: settle 600ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settle { animation: none; }
 }

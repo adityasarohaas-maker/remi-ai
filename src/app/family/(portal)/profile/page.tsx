@@ -30,7 +30,7 @@ export default async function ProfilePage() {
           <input name="telegram_chat_id" defaultValue={h.telegram_chat_id ?? ''} className={input} />
           <span className="mt-1 block text-sm text-stone-500">Message your family&apos;s Remi bot once, then ask @userinfobot for your chat id.</span>
         </label>
-        <button className="rounded-lg bg-teal-800 px-5 py-3 text-white">Save</button>
+        <button className="rounded-lg bg-garden px-5 py-3 text-white">Save</button>
       </form>
     </section>
   );
