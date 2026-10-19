@@ -61,3 +61,20 @@ describe('speakableText with inline hidden lines', () => {
     expect(speakableText('I will let Priya know. TELL_FAMILY: Avni misses Rohan. More', false)).toBe('I will let Priya know.');
   });
 });
+
+describe('takeSentences: speak the first phrase early', () => {
+  it('lets the opening phrase go at a comma once it has a few words, so Remi starts talking sooner', () => {
+    expect(takeSentences('Oh, how lovely that sounds, and the', 0, false, { firstPhrase: true }))
+      .toEqual({ sentences: ['Oh, how lovely that sounds,'], upTo: 28 });
+  });
+  it('does not cut a phrase that is too short to say on its own', () => {
+    expect(takeSentences('Oh, how', 0, false, { firstPhrase: true })).toEqual({ sentences: [], upTo: 0 });
+  });
+  it('only does this for the opening, and only when asked', () => {
+    expect(takeSentences('Oh, how lovely that sounds, and the', 0, false)).toEqual({ sentences: [], upTo: 0 });
+    expect(takeSentences('Hello. Oh, how lovely that sounds, and', 7, false, { firstPhrase: true }).sentences).toEqual([]);
+  });
+  it('still prefers a full sentence when there is one', () => {
+    expect(takeSentences('Hello Avni. Oh, how', 0, false, { firstPhrase: true }).sentences).toEqual(['Hello Avni.']);
+  });
+});

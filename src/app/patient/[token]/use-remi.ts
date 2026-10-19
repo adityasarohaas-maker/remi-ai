@@ -15,7 +15,7 @@ export type Turn = { you: string; remi: string };
 type Screen = 'home' | 'talk' | 'face' | 'today';
 
 const REMINDER_REPLY_MS = 90_000; // "done" counts as an answer to a reminder for this long
-const SETTLE_MS = 800;            // live words unchanged this long = she has finished speaking
+const SETTLE_MS = 500;            // live words unchanged this long = she has finished speaking
 
 /** The orb listens for these instead of re-rendering on every word. */
 export const REMI_BEAT = 'remi-beat';
@@ -83,8 +83,11 @@ export function useRemi(o: {
     }
   }, []);
 
-  const speakNow = useCallback(async (text: string, show: boolean, clip?: Promise<Blob | null>) => {
-    if (!text) return;
+  // Each interruption starts a new turn; anything queued for an older turn is dropped.
+  const turn = useRef(0);
+
+  const speakNow = useCallback(async (text: string, show: boolean, clip?: Promise<Blob | null>, forTurn = turn.current) => {
+    if (!text || forTurn !== turn.current) return;
     speaking.current++;
     listener.current?.pause();
     setStatus((s) => (s === 'blocked' || s === 'off' || s === 'unsupported' ? s : 'speaking'));
@@ -108,7 +111,8 @@ export function useRemi(o: {
   const enqueue = useCallback((text: string, show: boolean): Promise<void> => {
     // fetch the audio now, so the next sentence is ready while this one plays
     const clip = latest.current.cloudVoice && player.current ? fetchVoice(text) : undefined;
-    const next = queue.current.then(() => speakNow(text, show, clip));
+    const forTurn = turn.current;
+    const next = queue.current.then(() => speakNow(text, show, clip, forTurn));
     queue.current = next.catch(() => {});
     return next;
   }, [speakNow, fetchVoice]);
@@ -131,10 +135,12 @@ export function useRemi(o: {
     const decoder = new TextDecoder();
     let buffer = '', raw = '', spokenUpTo = 0, shown = '';
     let final: { reply?: string | null; mood?: string } | null = null;
+    const myTurn = turn.current;
     const pump = (done: boolean) => {
+      if (turn.current !== myTurn) return; // she interrupted: the rest of this reply goes unsaid
       const speakable = speakableText(raw, done);
       if (speakable && speakable !== shown) { shown = speakable; setReply(speakable); }
-      const { sentences, upTo } = takeSentences(speakable, spokenUpTo, done);
+      const { sentences, upTo } = takeSentences(speakable, spokenUpTo, done, { firstPhrase: true });
       spokenUpTo = upTo;
       for (const s of sentences) enqueue(s, false);
     };
@@ -201,7 +207,8 @@ export function useRemi(o: {
     if (busy.current && !detectSafetyWords(raw).length) { note(raw, 'dropped: still answering'); return; }
     busy.current = true;
     const previous = { you: heard, remi: reply };
-    if (h.kind === 'addressed') { setHeard(h.text); setReply(''); setStatus('thinking'); }
+    // a reply to Remi gets the same instant 'thinking' as its name does: she sees she was heard
+    if (h.kind !== 'overheard') { setHeard(h.text); setReply(''); setStatus('thinking'); }
     try {
       const result = await converse(h.text, h.kind);
       const answer = result.text;
@@ -212,6 +219,8 @@ export function useRemi(o: {
         if (previous.remi) setTurns((ts) => [...ts, previous].slice(-3));
       } else if (h.kind === 'addressed') {
         await say(t.retry);
+      } else if (h.kind === 'followup') {
+        setHeard(''); // it wasn't for Remi after all
       }
     } catch (e) {
       note(h.text, `error: ${(e as Error).message}`);
@@ -274,14 +283,25 @@ export function useRemi(o: {
   }, [o.language, makeListener]);
 
   /** She tapped the orb: whatever she says next is for Remi, no name needed. */
+  /** She cut in: Remi stops mid-sentence, drops the rest of the reply, and listens. */
+  const interrupt = useCallback(() => {
+    turn.current++;
+    window.speechSynthesis?.cancel();
+    if (player.current && !player.current.paused) {
+      player.current.pause();
+      player.current.onended?.(new Event('ended'));
+    }
+  }, []);
+
   const listenNow = useCallback(() => {
-    if (!listener.current || speaking.current) return;
+    if (!listener.current) return;
+    if (speaking.current) interrupt();
     armed.current = true;
     lastSpokeAt.current = Date.now();
     setReply('');
     setHeard('');
     setStatus((s) => (s === 'blocked' ? s : 'hearing'));
-  }, []);
+  }, [interrupt]);
 
   /** A routine item became due: say it, and listen for "done". */
   const announce = useCallback((item: { id: string; text: string }) => {

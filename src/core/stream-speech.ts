@@ -38,8 +38,12 @@ export function speakableText(raw: string, done: boolean): string {
 // A sentence ends at . ! ? । or … (plus closing quotes) followed by whitespace.
 const SENTENCE = /[^.!?।…]*[.!?।…]+["'”’)]*(?=\s)/y;
 
-/** Finished sentences in text after `from`; when `done`, the rest too. */
-export function takeSentences(text: string, from: number, done: boolean): { sentences: string[]; upTo: number } {
+/**
+ * Finished sentences in text after `from`; when `done`, the rest too.
+ * firstPhrase: before the first full sentence exists, let an opening phrase of 4+ words go at a
+ * comma or dash ("Oh, how lovely that sounds,"), so Remi starts talking while the rest is written.
+ */
+export function takeSentences(text: string, from: number, done: boolean, o: { firstPhrase?: boolean } = {}): { sentences: string[]; upTo: number } {
   const sentences: string[] = [];
   let upTo = from;
   for (;;) {
@@ -50,6 +54,18 @@ export function takeSentences(text: string, from: number, done: boolean): { sent
     if (s) sentences.push(s);
     upTo = SENTENCE.lastIndex;
     while (upTo < text.length && /\s/.test(text[upTo])) upTo++;
+  }
+  if (o.firstPhrase && from === 0 && sentences.length === 0 && !done) {
+    for (const m of text.matchAll(/[,;:—–](?=\s)|[，、]/g)) {
+      const end = (m.index ?? 0) + m[0].length;
+      const phrase = text.slice(0, end).trim();
+      const long = /[，、]/.test(m[0]) ? phrase.length >= 6 : phrase.split(/\s+/).length >= 4;
+      if (!long) continue;
+      sentences.push(phrase);
+      upTo = end;
+      while (upTo < text.length && /\s/.test(text[upTo])) upTo++;
+      break;
+    }
   }
   if (done && upTo < text.length) {
     const rest = text.slice(upTo).trim();
