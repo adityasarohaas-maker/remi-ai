@@ -56,6 +56,13 @@ describe('buildCompanionPrompt', () => {
     expect(p).toContain('Do not repeat her own facts back to her');
   });
 
+  it('keeps replies short and lively, with a playful little personality', () => {
+    const p = buildCompanionPrompt(base);
+    expect(p).toContain('Keep every reply under 25 words');
+    expect(p).toContain('playful and curious');
+    expect(p).toContain('Never lecture or explain at length');
+  });
+
   it('injects the family script when a sensitive topic matched', () => {
     const p = buildCompanionPrompt({ ...base, sensitive: { id: 'g', topic: 'Husband Ramesh', triggerWords: [], approach: 'share_memory', familyScript: 'Ramesh loved your rajma.', callPersonName: null } });
     expect(p).toContain('Ramesh loved your rajma.');
