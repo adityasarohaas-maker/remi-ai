@@ -1,6 +1,13 @@
 {
+  "framework": "nextjs",
   "crons": [
-    { "path": "/api/cron/digest", "schedule": "30 14 * * *" },
-    { "path": "/api/cron/reset-demo", "schedule": "0 5 * * *" }
+    {
+      "path": "/api/cron/digest",
+      "schedule": "30 14 * * *"
+    },
+    {
+      "path": "/api/cron/reset-demo",
+      "schedule": "0 5 * * *"
+    }
   ]
 }
