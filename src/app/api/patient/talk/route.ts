@@ -45,3 +45,8 @@ export async function POST(req: Request) {
     headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store, no-transform' },
   });
 }
+
+/** A wake-up call: the tablet sends one when she starts speaking, so the reply isn't slowed by a cold start. */
+export function GET() {
+  return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
+}

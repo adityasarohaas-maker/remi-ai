@@ -59,6 +59,7 @@ export function useRemi(o: {
   const busy = useRef(false);
   const armed = useRef(false);       // she tapped the orb: the next words are for Remi
   const lastSpokeAt = useRef(0);
+  const lastWarm = useRef(0);
   const lastActivity = useRef(0);    // set on start
   const lastCheckIn = useRef(0);
   const checkInAfterMs = useRef<number | undefined>(undefined);
@@ -243,6 +244,11 @@ export function useRemi(o: {
       settleMs: SETTLE_MS,
       onText: (text) => { handleRef.current(text); },
       onInterim: (text) => {
+        // she has started speaking: wake the reply server now, so it's warm when she finishes
+        if (Date.now() - lastWarm.current > 20_000) {
+          lastWarm.current = Date.now();
+          latest.current.api('talk', { method: 'GET' }).catch(() => {});
+        }
         setLive(text);
         beat('hear');
         setStatus((s) => (s === 'listening' ? 'hearing' : s));
