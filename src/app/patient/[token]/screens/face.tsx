@@ -76,7 +76,7 @@ export function Face({ api, language, back, say, autoLook = false }: {
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-8 sm:px-12">
-      <button onClick={back} className="self-start rounded-xl px-2 text-2xl underline underline-offset-4">← {t.back}</button>
+      <button onClick={back} className="self-start rounded-xl px-2 text-2xl underline underline-offset-4"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span> {t.back}</button>
       {camera !== 'off' && (
         <video ref={video} autoPlay playsInline muted className="aspect-video w-full rounded-[2rem] bg-ink object-cover" />
       )}

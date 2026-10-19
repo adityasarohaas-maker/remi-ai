@@ -76,7 +76,7 @@ export function useRemi(o: {
   const player = useRef<HTMLAudioElement | null>(null);
   const fetchVoice = useCallback(async (text: string): Promise<Blob | null> => {
     try {
-      const res = await latest.current.api('voice', { method: 'POST', body: JSON.stringify({ text }) });
+      const res = await latest.current.api('voice', { method: 'POST', body: JSON.stringify({ text, language: latest.current.language }) });
       return res.status === 200 ? await res.blob() : null;
     } catch {
       return null;
@@ -119,7 +119,7 @@ export function useRemi(o: {
     const res = await latest.current.api('talk', {
       method: 'POST',
       headers: { accept: 'application/x-ndjson' },
-      body: JSON.stringify({ text, mode }),
+      body: JSON.stringify({ text, mode, language: latest.current.language }),
     });
     if (!res.body || !res.headers.get('content-type')?.includes('ndjson')) {
       const data = await res.json().catch(() => ({}));
@@ -225,6 +225,23 @@ export function useRemi(o: {
   const handleRef = useRef(handle);
   useEffect(() => { handleRef.current = handle; }, [handle]);
 
+  /** Always-on listening in the current language; null where the browser can't listen. */
+  const makeListener = useCallback(() => {
+    const Ctor = speechRecognitionCtor(window);
+    if (!Ctor) return null;
+    return createListener(Ctor, {
+      lang: latest.current.language,
+      settleMs: SETTLE_MS,
+      onText: (text) => { handleRef.current(text); },
+      onInterim: (text) => {
+        setLive(text);
+        beat('hear');
+        setStatus((s) => (s === 'listening' ? 'hearing' : s));
+      },
+      onState: (s: ListenerState) => { if (s === 'blocked') setStatus('blocked'); },
+    });
+  }, []);
+
   /** Needs a tap: browsers allow the microphone and sound only after one. */
   const start = useCallback(async () => {
     if (latest.current.cloudVoice && !player.current) {
@@ -232,19 +249,8 @@ export function useRemi(o: {
       player.current.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
       player.current.play().catch(() => {}); // this tap unlocks sound for the rest of the visit
     }
-    const Ctor = speechRecognitionCtor(window);
-    if (Ctor) {
-      listener.current = createListener(Ctor, {
-        lang: latest.current.language,
-        settleMs: SETTLE_MS,
-        onText: (text) => { handleRef.current(text); },
-        onInterim: (text) => {
-          setLive(text);
-          beat('hear');
-          setStatus((s) => (s === 'listening' ? 'hearing' : s));
-        },
-        onState: (s: ListenerState) => { if (s === 'blocked') setStatus('blocked'); },
-      });
+    listener.current = makeListener();
+    if (listener.current) {
       listener.current.start();
       setStatus('listening');
     } else {
@@ -256,7 +262,16 @@ export function useRemi(o: {
     checkInAfterMs.current = quiet > 0 ? quiet * 60_000 : undefined;
     feel({ event: 'greeting' });
     await say(t.intro(latest.current.preferredName));
-  }, [say, t, feel]);
+  }, [say, t, feel, makeListener]);
+
+  // A new language from the 🌐 button: listen in it from now on.
+  useEffect(() => {
+    if (!listener.current) return;
+    listener.current.stop();
+    listener.current = makeListener();
+    listener.current?.start();
+    if (speaking.current || held.current) listener.current?.pause();
+  }, [o.language, makeListener]);
 
   /** She tapped the orb: whatever she says next is for Remi, no name needed. */
   const listenNow = useCallback(() => {

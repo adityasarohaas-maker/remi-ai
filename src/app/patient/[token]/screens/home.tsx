@@ -5,6 +5,7 @@ import type { KodiCue, KodiEmotion, KodiEvent } from '@/core/kodi';
 import { labelsFor } from '../labels';
 import { RemiStatusLine } from '../remi-status';
 import { Kodi } from '../kodi/kodi';
+import { LanguagePicker } from '../language-picker';
 import type { Api } from '../patient-app';
 import type { TodayData } from './today';
 import type { RemiStatus, Turn } from '../use-remi';
@@ -35,14 +36,14 @@ function ActionCard({ onClick, label, glyph }: { onClick: () => void; label: str
       className="group flex min-h-16 flex-col items-center justify-center gap-1 rounded-3xl bg-surface/70 p-2 text-center shadow-[0_0_0_1px_var(--ring),0_18px_40px_-28px_rgb(60_30_140/0.55)] backdrop-blur-md hover:bg-surface sm:flex-row sm:justify-start sm:gap-4 sm:p-4 sm:text-left">
       <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-garden text-paper sm:size-12">{glyph}</span>
       <span className="font-display text-base font-semibold leading-tight sm:flex-1 sm:text-2xl">{label}</span>
-      <span aria-hidden className="hidden size-10 shrink-0 place-items-center rounded-full bg-leaf text-xl text-garden-deep group-hover:translate-x-0.5 sm:grid">→</span>
+      <span aria-hidden className="hidden size-10 shrink-0 place-items-center rounded-full bg-leaf text-xl text-garden-deep group-hover:translate-x-0.5 rtl:-scale-x-100 sm:grid">→</span>
     </button>
   );
 }
 
-export function Home({ api, preferredName, language, today, go, remi, kodi }: {
+export function Home({ api, preferredName, language, today, go, remi, kodi, onLanguage }: {
   api: Api; preferredName: string; language: string; today: TodayData | null; go: Go; remi: RemiView;
-  kodi: { emotion: KodiEmotion; cue: KodiCue; night: boolean };
+  kodi: { emotion: KodiEmotion; cue: KodiCue; night: boolean }; onLanguage: (code: string) => void;
 }) {
   const t = labelsFor(language);
   const [help, setHelp] = useState<'idle' | 'sending' | string>('idle');
@@ -82,9 +83,12 @@ export function Home({ api, preferredName, language, today, go, remi, kodi }: {
             <div className="h-[7.5rem] sm:h-[8.5rem]" aria-hidden />
           )}
         </div>
-        {remi.active && (
-          <RemiStatusLine status={remi.status} language={language} className="rounded-full bg-surface/70 px-4 py-2 shadow-[0_0_0_1px_var(--ring)] backdrop-blur-md" />
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {remi.active && (
+            <RemiStatusLine status={remi.status} language={language} className="rounded-full bg-surface/70 px-4 py-2 shadow-[0_0_0_1px_var(--ring)] backdrop-blur-md" />
+          )}
+          <LanguagePicker language={language} onChange={onLanguage} />
+        </div>
       </header>
 
       <section className="flex min-h-0 flex-1 flex-col items-center text-center">

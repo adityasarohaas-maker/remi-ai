@@ -198,7 +198,7 @@ describe('handleTalk', () => {
       chat: async () => { throw new Error('no key'); },
       loadContext: async () => ({ ...ctx, household: { ...ctx.household, language: 'hi-IN' } }),
     });
-    expect((await handleTalk(hi.deps, { householdId: 'h1', text: 'आज क्या दिन है' })).body.reply).toBe('आज Saturday है, 17 October 2026। अभी 1:10 pm बजे हैं।');
+    expect((await handleTalk(hi.deps, { householdId: 'h1', text: 'आज क्या दिन है' })).body.reply).toBe('आज शनिवार है, 17 अक्टूबर 2026। अभी 1:10 pm बजे हैं।');
   });
   describe('speech just after Remi spoke', () => {
     const followup = (text: string) => ({ householdId: 'h1', text, mode: 'followup' as const });
@@ -231,7 +231,7 @@ describe('handleTalk', () => {
 
   it('says the clock answer in Hindi without the model when she asks in Hindi', async () => {
     const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
-    expect((await handleTalk(deps, { householdId: 'h1', text: 'आज क्या दिन है' })).body.reply).toMatch(/^आज Saturday है/);
+    expect((await handleTalk(deps, { householdId: 'h1', text: 'आज क्या दिन है' })).body.reply).toMatch(/^आज शनिवार है/);
   });
   it('puts the reply language on her own message when she speaks Hindi', async () => {
     const { deps, chat } = makeDeps();
@@ -299,5 +299,26 @@ describe('handleTalk', () => {
     const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
     expect(messages[0].content).toContain('Usually reply in Marathi');
     expect(messages.at(-1)!.content).toBe('आज कोणता दिवस आहे');
+  });
+  describe('the tablet chooses the language', () => {
+    it('replies in the language picked on the tablet', async () => {
+      const { deps, chat } = makeDeps();
+      await handleTalk(deps, { householdId: 'h1', text: '¿Qué día es hoy?', language: 'es-ES' });
+      const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+      expect(messages[0].content).toContain('Usually reply in Spanish');
+    });
+    it('falls back in that language without the model, with the date in that language', async () => {
+      const { deps } = makeDeps({ chat: async () => { throw new Error('no key'); } });
+      const r = await handleTalk(deps, { householdId: 'h1', text: 'Hola', language: 'es-ES' });
+      expect(r.body.reply).toBe('Estoy aquí contigo. Respiremos despacio, juntos.');
+      const t = await handleTalk(deps, { householdId: 'h1', text: '¿qué día es hoy?', language: 'es-ES' });
+      expect(t.body.reply).toMatch(/^Hoy es sábado/);
+    });
+    it('ignores a language it does not support', async () => {
+      const { deps, chat } = makeDeps();
+      await handleTalk(deps, { householdId: 'h1', text: 'Hello', language: 'xx-XX' });
+      const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+      expect(messages[0].content).toContain('Usually reply in English');
+    });
   });
 });

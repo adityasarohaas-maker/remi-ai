@@ -5,13 +5,14 @@ import { handleTalk, type TalkMode } from '@/core/talk';
 export async function POST(req: Request) {
   const householdId = await requireDevice(req);
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { text?: unknown; mode?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { text?: unknown; mode?: unknown; language?: unknown } | null;
   const clientKey = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || undefined;
   const input = {
     householdId,
     text: typeof body?.text === 'string' ? body.text : '',
     mode: (body?.mode === 'overheard' || body?.mode === 'followup' ? body.mode : 'addressed') as TalkMode,
     clientKey,
+    language: typeof body?.language === 'string' ? body.language : undefined, // checked in handleTalk
   };
 
   if (!req.headers.get('accept')?.includes('application/x-ndjson')) {

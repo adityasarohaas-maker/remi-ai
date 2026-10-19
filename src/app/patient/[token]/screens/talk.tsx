@@ -21,7 +21,7 @@ export function Talk({ api, language, back }: { api: Api; language: string; back
     setReply('');
     setState('thinking');
     try {
-      const res = await api('talk', { method: 'POST', body: JSON.stringify({ text }) });
+      const res = await api('talk', { method: 'POST', body: JSON.stringify({ text, language }) });
       const data = await res.json().catch(() => ({}));
       const answer = typeof data.reply === 'string' ? data.reply : t.retry;
       setReply(answer);
@@ -53,7 +53,7 @@ export function Talk({ api, language, back }: { api: Api; language: string; back
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-8 sm:px-12">
-      <button onClick={back} className="self-start rounded-xl px-2 text-2xl underline underline-offset-4">← {t.back}</button>
+      <button onClick={back} className="self-start rounded-xl px-2 text-2xl underline underline-offset-4"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span> {t.back}</button>
       {mode === 'voice' && (
         <>
           <button

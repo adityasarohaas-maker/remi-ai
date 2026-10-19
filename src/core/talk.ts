@@ -10,6 +10,7 @@ import { parseMoodTag, extractTellFamily, type Mood } from './mood';
 import { buildCompanionPrompt, languageName } from './companion-prompt';
 import { fallbackReply, helpSentMessage, timeAnswer } from './messages';
 import { worthJoining, JOIN_IN_COOLDOWN_SECONDS } from './listening';
+import { isSupportedLanguage } from './voices';
 
 export const MAX_INPUT = 500;
 export const RATE_PER_MIN = 20;         // model calls per household per minute
@@ -38,6 +39,8 @@ export async function handleTalk(deps: CoreDeps, input: {
   householdId: string; text: string; clientKey?: string; mode?: TalkMode;
   /** Stream the model's words to the tablet so Remi can start speaking after the first sentence. */
   onDelta?: (text: string) => void;
+  /** The language picked on the tablet; the family's profile language when absent or unsupported. */
+  language?: string;
 }) {
   const text = input.text.trim().slice(0, MAX_INPUT);
   if (!text) return { status: 400, body: { error: 'empty' } };
@@ -50,7 +53,8 @@ export async function handleTalk(deps: CoreDeps, input: {
   const h = ctx.household;
   // People with dementia often go back to their first language: answer Hindi in Hindi, whatever the household
   // default. Families whose own language is written in Devanagari (Hindi, Marathi, Nepali) keep their language.
-  const language = /[ऀ-ॿ]/.test(text) && !/^(hi|mr|ne)/i.test(h.language) ? 'hi-IN' : h.language;
+  const chosen = input.language && isSupportedLanguage(input.language) ? input.language : h.language;
+  const language = /[ऀ-ॿ]/.test(text) && !/^(hi|mr|ne)/i.test(chosen) ? 'hi-IN' : chosen;
 
   // Safety comes before any rate limit: a fall must reach the family even when the tablet is busy.
   const safety = detectSafetyWords(text);
@@ -80,7 +84,7 @@ export async function handleTalk(deps: CoreDeps, input: {
     return { status: 429, body: { error: 'too many requests', reply: busyReply, alerted: safety.length > 0 } };
   }
 
-  const local = localParts(now, h.timezone);
+  const local = localParts(now, h.timezone, language); // weekday and date in her language
   if (sensitive?.approach === 'call_relative') {
     alerts.push(deps.alert(householdId, 'call_request', `${h.preferredName} is asking about ${sensitive.topic}. Please call ${sensitive.callPersonName ?? h.primaryContactName ?? 'them'} now.`));
   }

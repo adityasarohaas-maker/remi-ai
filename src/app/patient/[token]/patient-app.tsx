@@ -6,6 +6,9 @@ import { useRemi, type RemiPerson } from './use-remi';
 import { Kodi } from './kodi/kodi';
 import { isNightTheme } from '@/core/kodi';
 import { RemiStatusLine } from './remi-status';
+import { LanguagePicker } from './language-picker';
+import { isRtl } from '@/core/i18n';
+import { isSupportedLanguage } from '@/core/voices';
 import { Home } from './screens/home';
 import { Talk } from './screens/talk';
 import { Face } from './screens/face';
@@ -14,9 +17,22 @@ import { Today, type TodayData } from './screens/today';
 export type Api = (path: string, init?: RequestInit) => Promise<Response>;
 type Screen = 'home' | 'talk' | 'face' | 'today';
 
-export function PatientApp({ token, preferredName, language, people, theme, debug = false, cloudVoice = false }: {
+export function PatientApp({ token, preferredName, language: homeLanguage, people, theme, debug = false, cloudVoice = false }: {
   token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night'; debug?: boolean; cloudVoice?: boolean;
 }) {
+  // The language can be changed on the tablet (the 🌐 button); the family's profile language is the start.
+  const [language, setLanguage] = useState(homeLanguage);
+  const langKey = `remi-lang:${token}`;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(langKey);
+      if (saved && isSupportedLanguage(saved)) setLanguage(saved); // eslint-disable-line react-hooks/set-state-in-effect
+    } catch { /* private mode: keep the profile language */ }
+  }, [langKey]);
+  const changeLanguage = useCallback((code: string) => {
+    setLanguage(code);
+    try { localStorage.setItem(langKey, code); } catch { /* still changes for this visit */ }
+  }, [langKey]);
   const t = labelsFor(language);
   const [screen, setScreen] = useState<Screen>('home');
   const [autoLook, setAutoLook] = useState(false);
@@ -31,18 +47,28 @@ export function PatientApp({ token, preferredName, language, people, theme, debu
 
   const refresh = useCallback(async () => {
     try {
-      const res = await api('today');
+      const res = await api(`today?lang=${encodeURIComponent(language)}`);
       if (res.ok) setToday(await res.json());
     } catch {
       // offline for a moment; the next poll retries
     }
-  }, [api]);
+  }, [api, language]);
 
+  // Poll the day; a language change cancels the request for the old language, so it can't land last.
   useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 60_000);
-    return () => clearInterval(id);
-  }, [refresh]);
+    const ctrl = new AbortController();
+    const load = async () => {
+      try {
+        const res = await api(`today?lang=${encodeURIComponent(language)}`, { signal: ctrl.signal });
+        if (res.ok) { const data = await res.json(); if (!ctrl.signal.aborted) setToday(data); }
+      } catch {
+        // offline for a moment, or cancelled: the next poll retries
+      }
+    };
+    load();
+    const id = setInterval(load, 60_000);
+    return () => { ctrl.abort(); clearInterval(id); };
+  }, [api, language]);
 
   const markDone = useCallback(async (id: string) => {
     await api('reminder', { method: 'POST', body: JSON.stringify({ routineItemId: id }) });
@@ -84,9 +110,10 @@ export function PatientApp({ token, preferredName, language, people, theme, debu
   const tapDone = (id: string) => { remi.feel({ event: 'reminder-done' }); return markDone(id); };
 
   return (
-    <div className="tablet flex h-dvh min-h-[34rem] flex-col overflow-hidden" data-theme={night ? 'night' : 'day'}>
+    <div className="tablet flex h-dvh min-h-[34rem] flex-col overflow-hidden" data-theme={night ? 'night' : 'day'} lang={language} dir={isRtl(language) ? 'rtl' : 'ltr'}>
       {remi.status === 'off' && !skipped && (
         <div className="tablet fixed inset-0 z-20 flex flex-col items-center justify-center gap-6 px-6 py-8 text-center" data-theme={night ? 'night' : 'day'}>
+          <LanguagePicker language={language} onChange={changeLanguage} className="absolute end-4 top-4 sm:end-8 sm:top-6" />
           <Kodi className="min-h-0 w-full max-w-lg flex-1" state="listening" emotion="happy" cue={null} night={night} label={t.startRemi} onPress={remi.start} />
           <div className="font-display">
             <p className="text-4xl font-extrabold tracking-tight sm:text-5xl">{t.tapToBegin}</p>
@@ -102,7 +129,7 @@ export function PatientApp({ token, preferredName, language, people, theme, debu
         </div>
       )}
       {remi.active && screen !== 'home' && <RemiStatusLine status={remi.status} language={language} className="px-6 pt-5 sm:px-12" />}
-      {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} kodi={kodi} />}
+      {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} kodi={kodi} onLanguage={changeLanguage} />}
       {screen === 'talk' && <Talk api={api} language={language} back={() => go('home')} />}
       {screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} />}
       {debug && (

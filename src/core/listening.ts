@@ -1,4 +1,5 @@
 import { isQuestion } from './text';
+import { phrasesFor } from './phrases';
 
 // Hands-free Remi: the tablet hears everything, but only some of it is for Remi.
 export const FOLLOW_UP_MS = 45_000;               // after Remi speaks, the conversation stays open this long
@@ -7,7 +8,7 @@ export const JOIN_IN_COOLDOWN_SECONDS = 60;       // Remi joins an overheard con
 
 // Letters around the name mean it is part of another word ("premium"). \b would not work for Devanagari.
 // The spellings are how speech recognition actually writes "Remi" (seen live: "Rami").
-const NAME = String.raw`(?<![\p{L}\p{M}])(?:remi|remy|rémi|rémy|reemi|remmy|rami|ramy|rimi|rimmy|रेमी|रेमि|रमी|रामी)(?![\p{L}\p{M}])`;
+const NAME = String.raw`(?<![\p{L}\p{M}])(?:remi|remy|rémi|rémy|reemi|remmy|rami|ramy|rimi|rimmy|रेमी|रेमि|रमी|रामी|রেমি|ரெமி|రెమి|ریمی|ريمي|レミ|雷米|瑞米|蕾米)(?![\p{L}\p{M}])`;
 const GREETING = String.raw`(?:(?:hey|hi|hello|okay|ok|oh|अरे|हे|सुनो)\s+)?`;
 const WAKE = new RegExp(NAME, 'iu');
 const WAKE_ALL = new RegExp(GREETING + NAME, 'giu');
@@ -31,11 +32,17 @@ export function classifyHeard(raw: string, at: { nowMs: number; lastSpokeAtMs: n
 }
 
 const word = (w: string) => new RegExp(String.raw`(?<![\p{L}\p{M}])(?:${w})(?![\p{L}\p{M}])`, 'iu');
-const NOT_DONE = word('not|no|nope|nahi|nahin|नहीं|ना');
+const NOT_DONE = word([
+  'not', 'no', 'nope', 'nahi', 'nahin', 'नहीं', 'ना', 'non', 'nein', 'não', 'nao', 'todavía no', 'pas encore',
+  'لا', 'いいえ', 'まだ', '没有', '还没', 'না', 'இல்லை', 'లేదు', 'نہیں', 'नाही',
+].join('|'));
 const DONE = word([
   'done', 'yes', 'yeah', 'yep', 'taken', 'took', 'finished', 'ok', 'okay', 'had it', 'ate',
   'haan', 'han', 'ho gaya', 'ho gya', 'kar liya', 'le li', 'le liya', 'kha liya',
-  'हाँ', 'हां', 'हो गया', 'ले ली', 'ले लिया', 'खा लिया', 'कर लिया',
+  'हाँ', 'हां', 'हो गया', 'ले ली', 'ले लिया', 'खा लिया', 'कर लिया', 'हो', 'झालं', 'झाले',
+  'sí', 'si', 'listo', 'lista', 'hecho', 'ya', 'oui', 'fait', 'fini', "c'est fait", 'ja', 'fertig', 'erledigt',
+  'sim', 'pronto', 'feito', 'já', 'نعم', 'تم', 'خلاص', 'はい', 'できた', '終わった', '好了', '是的', '做完了',
+  'হ্যাঁ', 'হয়ে গেছে', 'ஆமாம்', 'முடிந்தது', 'అవును', 'అయిపోయింది', 'ہاں', 'جی', 'ہو گیا',
 ].join('|'));
 
 /** A reply to a spoken reminder that means it has been done. */
@@ -58,20 +65,7 @@ type CheckInPerson = { name: string; relation: string; isDeceased: boolean };
 export function checkInLine(language: string, name: string, people: CheckInPerson[], seed: number): string {
   const living = people.filter((p) => !p.isDeceased);
   const p = living.length ? living[seed % living.length] : null;
-  const hi = language.toLowerCase().startsWith('hi');
-  const lines = hi
-    ? [
-        `नमस्ते ${name}। मैं आपके साथ हूँ। आपका मन कैसा है?`,
-        p ? `${name}, क्या आप मुझे ${p.name} के बारे में कुछ बताएँगे?` : `${name}, क्या आप मुझे अपने दिन के बारे में बताएँगे?`,
-        `${name}, चलिए साथ में एक गिलास पानी पीते हैं।`,
-        `${name}, चलिए साथ में धीरे से एक लंबी साँस लेते हैं।`,
-      ]
-    : [
-        `Hello ${name}. I'm here with you. How are you feeling?`,
-        p ? `${name}, would you like to tell me about ${p.name}, your ${p.relation}?` : `${name}, would you like to tell me about your day?`,
-        `${name}, shall we have a glass of water together?`,
-        `${name}, let's take a slow, easy breath together.`,
-      ];
+  const lines = phrasesFor(language).checkIns(name, p);
   return lines[seed % lines.length];
 }
 
