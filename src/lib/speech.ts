@@ -20,8 +20,8 @@ export function speechRecognitionCtor(win: unknown): (new () => SpeechRecognitio
 
 // Remi speaks with a soft female voice. Browsers don't say a voice's gender, so known names decide:
 // Neerja/Heera/Swara/Kalpana (Windows, Edge), Veena/Lekha (Apple), Google's female voices.
-const FEMALE = /neerja|heera|veena|swara|kalpana|lekha|aditi|raveena|samantha|zira|aria|jenny|sonia|libby|google हिन्दी|(?<![a-z])female/i;
-const MALE = /prabhat|hemant|ravi|madhur|rishi|david|mark|guy|ryan|george|daniel|(?<![a-z])male/i;
+const FEMALE = /neerja|heera|veena|swara|स्वरा|kalpana|कल्पना|lekha|aditi|raveena|samantha|zira|aria|jenny|sonia|libby|google हिन्दी|(?<![a-z])female/i;
+const MALE = /prabhat|hemant|ravi|madhur|मधुर|हेमंत|rishi|david|mark|guy|ryan|george|daniel|(?<![a-z])male/i;
 
 /** The softest female voice for the language: exact language first, then its family; male voices last. */
 export function pickVoice<V extends { name: string; lang: string }>(voices: readonly V[], lang: string): V | null {

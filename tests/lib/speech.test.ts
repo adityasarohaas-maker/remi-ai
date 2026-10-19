@@ -198,3 +198,13 @@ describe('pickVoice: a soft female voice', () => {
     expect(pickVoice([v('Hindi India', 'hi_IN')], 'hi-IN')?.name).toBe('Hindi India');
   });
 });
+
+describe('pickVoice with Devanagari voice names (as Edge lists them)', () => {
+  it('picks Swara, not Madhur, for Hindi', () => {
+    const edgeHindi = [
+      { name: 'Microsoft मधुर Online (Natural) - Hindi (India)', lang: 'hi-IN' },
+      { name: 'Microsoft स्वरा Online (Natural) - Hindi (India)', lang: 'hi-IN' },
+    ];
+    expect(pickVoice(edgeHindi, 'hi-IN')?.name).toContain('स्वरा');
+  });
+});
