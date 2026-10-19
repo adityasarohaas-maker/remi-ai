@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createListener, speakAsync, speechRecognitionCtor, type ListenerState } from '@/lib/speech';
+import { createListener, playClip, speakAsync, speechRecognitionCtor, type ListenerState } from '@/lib/speech';
 import { classifyHeard, isDoneReply, shouldCheckIn, checkInLine, voiceCommand } from '@/core/listening';
 import { speakableText, takeSentences } from '@/core/stream-speech';
 import { detectSafetyWords } from '@/core/safety';
@@ -29,6 +29,8 @@ const beat = (kind: 'word' | 'hear') => window.dispatchEvent(new CustomEvent(REM
 export function useRemi(o: {
   api: Api; language: string; preferredName: string; people: RemiPerson[];
   markDone: (id: string) => Promise<void>; go: (s: Screen, opts?: { autoLook?: boolean }) => void;
+  /** The server has a natural cloud voice (Azure); otherwise Remi uses the browser's own voice. */
+  cloudVoice?: boolean;
 }) {
   const t = labelsFor(o.language);
   const [status, setStatus] = useState<RemiStatus>('off');
@@ -70,14 +72,28 @@ export function useRemi(o: {
     setStatus((s) => (s === 'blocked' ? s : 'listening'));
   }, []);
 
-  const speakNow = useCallback(async (text: string, show: boolean) => {
+  // One audio element, unlocked by the first tap: phones only let a page play sound after a touch.
+  const player = useRef<HTMLAudioElement | null>(null);
+  const fetchVoice = useCallback(async (text: string): Promise<Blob | null> => {
+    try {
+      const res = await latest.current.api('voice', { method: 'POST', body: JSON.stringify({ text }) });
+      return res.status === 200 ? await res.blob() : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const speakNow = useCallback(async (text: string, show: boolean, clip?: Promise<Blob | null>) => {
     if (!text) return;
     speaking.current++;
     listener.current?.pause();
     setStatus((s) => (s === 'blocked' || s === 'off' || s === 'unsupported' ? s : 'speaking'));
     if (show) setReply(text);
     try {
-      await speakAsync(text, latest.current.language, undefined, { onWord: () => beat('word') });
+      // the natural cloud voice when it's there; the browser's voice if it isn't or fails
+      const audio = clip ? await clip : null;
+      const played = audio && player.current ? await playClip(player.current, audio) : false;
+      if (!played) await speakAsync(text, latest.current.language, undefined, { onWord: () => beat('word') });
     } finally {
       lastSpokeAt.current = Date.now();
       if (--speaking.current === 0) {
@@ -90,10 +106,12 @@ export function useRemi(o: {
   /** Remi's voice. One thing at a time, and the listener pauses so Remi never hears itself. */
   const queue = useRef<Promise<void>>(Promise.resolve());
   const enqueue = useCallback((text: string, show: boolean): Promise<void> => {
-    const next = queue.current.then(() => speakNow(text, show));
+    // fetch the audio now, so the next sentence is ready while this one plays
+    const clip = latest.current.cloudVoice && player.current ? fetchVoice(text) : undefined;
+    const next = queue.current.then(() => speakNow(text, show, clip));
     queue.current = next.catch(() => {});
     return next;
-  }, [speakNow]);
+  }, [speakNow, fetchVoice]);
   const say = useCallback((text: string) => enqueue(text, true), [enqueue]);
 
   /** Sends her words; speaks Remi's reply sentence by sentence as it streams in. Returns what Remi said. */
@@ -209,6 +227,11 @@ export function useRemi(o: {
 
   /** Needs a tap: browsers allow the microphone and sound only after one. */
   const start = useCallback(async () => {
+    if (latest.current.cloudVoice && !player.current) {
+      player.current = new Audio();
+      player.current.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+      player.current.play().catch(() => {}); // this tap unlocks sound for the rest of the visit
+    }
     const Ctor = speechRecognitionCtor(window);
     if (Ctor) {
       listener.current = createListener(Ctor, {

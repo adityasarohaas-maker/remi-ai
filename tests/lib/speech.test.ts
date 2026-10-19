@@ -208,3 +208,24 @@ describe('pickVoice with Devanagari voice names (as Edge lists them)', () => {
     expect(pickVoice(edgeHindi, 'hi-IN')?.name).toContain('स्वरा');
   });
 });
+
+import { playClip } from '@/lib/speech';
+
+describe('playClip (Remi\'s cloud voice)', () => {
+  const g = globalThis as Record<string, unknown>;
+  const stubUrl = () => { (URL as unknown as Record<string, unknown>).createObjectURL = () => 'blob:x'; (URL as unknown as Record<string, unknown>).revokeObjectURL = () => {}; };
+
+  it('plays the clip and resolves true when it ends', async () => {
+    stubUrl();
+    const player = { src: '', onended: null as null | (() => void), onerror: null as null | (() => void), play: async () => { setTimeout(() => player.onended?.(), 5); } };
+    await expect(playClip(player as unknown as HTMLAudioElement, new Blob(['x']))).resolves.toBe(true);
+    expect(player.src).toBe('blob:x');
+  });
+
+  it('resolves false when the browser refuses to play, so the browser voice can step in', async () => {
+    stubUrl();
+    const player = { src: '', onended: null, onerror: null, play: async () => { throw new Error('NotAllowedError'); } };
+    await expect(playClip(player as unknown as HTMLAudioElement, new Blob(['x']))).resolves.toBe(false);
+  });
+  void g;
+});

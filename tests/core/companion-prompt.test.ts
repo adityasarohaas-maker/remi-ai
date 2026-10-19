@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCompanionPrompt, buildRecognitionMessages } from '@/core/companion-prompt';
+import { buildCompanionPrompt, buildRecognitionMessages, languageName } from '@/core/companion-prompt';
 
 const base = {
   preferredName: 'Avni', language: 'hi-IN', about: 'Retired teacher from Jaipur.',
@@ -81,5 +81,15 @@ describe('buildRecognitionMessages', () => {
     expect(m[0].content).toContain('1–2 short');
     expect(m[1].content).toContain('Rohan');
     expect(m[1].content).toContain('Loves cricket');
+  });
+});
+
+describe('languageName: Remi talks to families worldwide', () => {
+  it('names every language a family can choose', () => {
+    expect(languageName('es-MX')).toBe('Spanish');
+    expect(languageName('ja-JP')).toBe('Japanese');
+    expect(languageName('fil-PH')).toBe('Filipino');
+    expect(languageName('ar-SA')).toBe('Arabic');
+    expect(languageName('sw-KE')).toBe('Swahili');
   });
 });

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getDeviceHousehold } from '@/lib/household';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { PatientApp } from './patient-app';
+import { cloudVoiceConfigured } from '@/lib/azure-tts';
 
 export const metadata: Metadata = { title: 'Remi', robots: { index: false, follow: false } };
 
@@ -21,7 +22,7 @@ export default async function PatientPage({ params, searchParams }: {
   const { data: people } = await supabaseAdmin().from('people').select('name, relation, is_deceased').eq('household_id', householdId).order('created_at');
   return (
     <PatientApp
-      token={token} preferredName={h.preferred_name} language={h.language} theme={theme} debug={sp.debug === '1'}
+      token={token} preferredName={h.preferred_name} language={h.language} theme={theme} debug={sp.debug === '1'} cloudVoice={cloudVoiceConfigured()}
       people={(people ?? []).map((p) => ({ name: p.name, relation: p.relation, isDeceased: p.is_deceased }))}
     />
   );

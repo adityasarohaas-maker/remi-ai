@@ -293,4 +293,11 @@ describe('handleTalk', () => {
       expect(r.body.reply).toMatch(/^I'm right here/);
     });
   });
+  it('keeps a Marathi family in Marathi even though Marathi is written in Devanagari too', async () => {
+    const { deps, chat } = makeDeps({ loadContext: async () => ({ ...ctx, household: { ...ctx.household, language: 'mr-IN' } }) });
+    await handleTalk(deps, { householdId: 'h1', text: 'आज कोणता दिवस आहे' });
+    const messages = (chat.mock.calls[0] as unknown[])[0] as { content: string }[];
+    expect(messages[0].content).toContain('Usually reply in Marathi');
+    expect(messages.at(-1)!.content).toBe('आज कोणता दिवस आहे');
+  });
 });

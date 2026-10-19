@@ -1,5 +1,7 @@
 import { requireFamily } from '@/lib/household';
 import { saveProfile } from './actions';
+import { LocaleFields } from '../../components/locale-fields';
+import { isDemoHousehold } from '@/core/demo';
 
 const input = 'mt-1 w-full rounded-lg border px-4 py-3';
 
@@ -13,13 +15,7 @@ export default async function ProfilePage() {
       <p className="mt-1 text-stone-600">{h.patient_name}</p>
       <form action={saveProfile} className="mt-6 space-y-4">
         <label className="block">What they like to be called<input name="preferred_name" defaultValue={h.preferred_name} className={input} /></label>
-        <label className="block">Language
-          <select name="language" defaultValue={h.language} className={input}>
-            <option value="en-IN">English</option>
-            <option value="hi-IN">Hindi</option>
-          </select>
-        </label>
-        <label className="block">Time zone<input name="timezone" defaultValue={h.timezone} className={input} /></label>
+        <LocaleFields language={h.language} timezone={h.timezone} locked={isDemoHousehold(householdId)} />
         <label className="block">About them — life story, favourite things, what calms them
           <textarea name="about" rows={5} defaultValue={h.about ?? ''} className={input} />
         </label>

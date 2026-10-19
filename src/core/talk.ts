@@ -48,8 +48,9 @@ export async function handleTalk(deps: CoreDeps, input: {
   historyP.catch(() => {}); // awaited later; never an unhandled rejection if we return early
   const ctx = await deps.loadContext(householdId, now);
   const h = ctx.household;
-  // People with dementia often go back to their first language: answer Hindi in Hindi, whatever the household default.
-  const language = /[ऀ-ॿ]/.test(text) ? 'hi-IN' : h.language;
+  // People with dementia often go back to their first language: answer Hindi in Hindi, whatever the household
+  // default. Families whose own language is written in Devanagari (Hindi, Marathi, Nepali) keep their language.
+  const language = /[ऀ-ॿ]/.test(text) && !/^(hi|mr|ne)/i.test(h.language) ? 'hi-IN' : h.language;
 
   // Safety comes before any rate limit: a fall must reach the family even when the tablet is busy.
   const safety = detectSafetyWords(text);

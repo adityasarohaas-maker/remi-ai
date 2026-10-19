@@ -4,6 +4,7 @@ import { requireFamily } from '@/lib/household';
 import { field } from '@/lib/form';
 import { isValidTimeZone } from '@/core/time';
 import { isDemoHousehold } from '@/core/demo';
+import { isSupportedLanguage } from '@/core/voices';
 
 export async function saveProfile(form: FormData) {
   const { sb, householdId } = await requireFamily();
@@ -14,7 +15,7 @@ export async function saveProfile(form: FormData) {
   const locked = isDemoHousehold(householdId);
   const { error } = await sb.from('households').update({
     preferred_name: field(form, 'preferred_name', 40) || undefined,
-    language: !locked && ['en-IN', 'hi-IN'].includes(language) ? language : undefined,
+    language: !locked && isSupportedLanguage(language) ? language : undefined,
     timezone: !locked && isValidTimeZone(tz) ? tz : undefined,
     about: v('about', 2000),
     home_address: v('home_address', 300),

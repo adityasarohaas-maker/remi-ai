@@ -6,7 +6,10 @@ import type { ChatMessage } from '@/lib/nebius';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', mr: 'Marathi',
-  gu: 'Gujarati', pa: 'Punjabi', kn: 'Kannada', ml: 'Malayalam',
+  gu: 'Gujarati', pa: 'Punjabi', kn: 'Kannada', ml: 'Malayalam', ur: 'Urdu',
+  es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', nl: 'Dutch', pl: 'Polish',
+  ru: 'Russian', tr: 'Turkish', ar: 'Arabic', he: 'Hebrew', zh: 'Chinese', ja: 'Japanese', ko: 'Korean',
+  id: 'Indonesian', fil: 'Filipino', vi: 'Vietnamese', th: 'Thai', sw: 'Swahili',
 };
 export const languageName = (code: string) => LANGUAGE_NAMES[code.split('-')[0].toLowerCase()] ?? 'English';
 

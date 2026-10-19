@@ -1,3 +1,4 @@
+import { LocaleFields } from '../components/locale-fields';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { createHousehold } from './actions';
@@ -14,13 +15,7 @@ export default async function SetupPage() {
       <form action={createHousehold} className="mt-8 space-y-4">
         <label className="block">Full name<input name="patient_name" required className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
         <label className="block">What they like to be called<input name="preferred_name" placeholder="e.g. Avni, Nani" className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
-        <label className="block">Language
-          <select name="language" className="mt-1 w-full rounded-lg border px-4 py-3">
-            <option value="en-IN">English</option>
-            <option value="hi-IN">Hindi</option>
-          </select>
-        </label>
-        <label className="block">Time zone<input name="timezone" defaultValue="Asia/Kolkata" className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
+        <LocaleFields />
         <button className="rounded-lg bg-garden px-5 py-3 text-white">Continue</button>
       </form>
     </main>

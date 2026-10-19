@@ -176,3 +176,22 @@ export function createListener(
     stop() { wanted = false; halt(); o.onState('stopped'); },
   };
 }
+
+/** Plays one clip of Remi's cloud voice; false if the browser refused, so the browser voice can step in. */
+export async function playClip(player: HTMLAudioElement, audio: Blob, maxMs = 30_000): Promise<boolean> {
+  const url = URL.createObjectURL(audio);
+  try {
+    player.src = url;
+    const ended = new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, maxMs);
+      player.onended = player.onerror = () => { clearTimeout(timer); resolve(); };
+    });
+    await player.play();
+    await ended;
+    return true;
+  } catch {
+    return false;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

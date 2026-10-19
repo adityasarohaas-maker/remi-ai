@@ -14,8 +14,8 @@ import { Today, type TodayData } from './screens/today';
 export type Api = (path: string, init?: RequestInit) => Promise<Response>;
 type Screen = 'home' | 'talk' | 'face' | 'today';
 
-export function PatientApp({ token, preferredName, language, people, theme, debug = false }: {
-  token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night'; debug?: boolean;
+export function PatientApp({ token, preferredName, language, people, theme, debug = false, cloudVoice = false }: {
+  token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night'; debug?: boolean; cloudVoice?: boolean;
 }) {
   const t = labelsFor(language);
   const [screen, setScreen] = useState<Screen>('home');
@@ -56,7 +56,7 @@ export function PatientApp({ token, preferredName, language, people, theme, debu
     setScreen(s);
   }, []);
 
-  const remi = useRemi({ api, language, preferredName, people, markDone, go });
+  const remi = useRemi({ api, language, preferredName, people, markDone, go, cloudVoice });
 
   const due = today?.items.find((i) => i.state === 'due');
   useEffect(() => {

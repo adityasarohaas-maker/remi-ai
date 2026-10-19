@@ -3,12 +3,14 @@ import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { field } from '@/lib/form';
 import { DEFAULT_TIME_ZONE, isValidTimeZone } from '@/core/time';
+import { isSupportedLanguage } from '@/core/voices';
 
 export async function createHousehold(form: FormData) {
   const sb = await supabaseServer();
   const patientName = field(form, 'patient_name', 80);
   const preferredName = field(form, 'preferred_name', 40) || patientName.split(' ')[0];
-  const language = field(form, 'language', 10) || 'en-IN';
+  const asked = field(form, 'language', 10);
+  const language = isSupportedLanguage(asked) ? asked : 'en-US';
   const tzInput = field(form, 'timezone', 60);
   const timezone = isValidTimeZone(tzInput) ? tzInput : DEFAULT_TIME_ZONE;
   if (!patientName) return;
