@@ -9,6 +9,8 @@ export const MODELS = {
   report: () => process.env.NEBIUS_REPORT_MODEL ?? 'nvidia/nemotron-3-super-120b-a12b',
   /** Tried when the chat model fails before saying anything (a provider can retire a model overnight). */
   backup: () => process.env.NEBIUS_BACKUP_MODEL || null,
+  /** Tells the stories: a stronger model, still quick to start. Falls back to the chat model. */
+  story: () => process.env.NEBIUS_STORY_MODEL || process.env.NEBIUS_CHAT_MODEL || 'nvidia/Nemotron-3_5-Lightning',
 };
 
 let client: OpenAI | null = null;

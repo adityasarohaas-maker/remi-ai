@@ -29,7 +29,8 @@ export function speakableText(raw: string, done: boolean): string {
   const lines = visible.split('\n');
   const last = lines.length - 1;
   const kept = lines.filter((line, i) => !isTag(line) && (done || i < last || !mayBecomeTag(line) || line.trim() === ''));
-  const text = kept.join('\n').trim();
+  // models sometimes write markdown; the marks must never be read aloud or shown as captions
+  const text = kept.join('\n').replace(/\*+|`+|^#{1,6}\s*/gm, '').trim();
   const upper = text.toUpperCase();
   if (/^SKIP\b/.test(upper) || (!done && 'SKIP'.startsWith(upper))) return '';
   return text;

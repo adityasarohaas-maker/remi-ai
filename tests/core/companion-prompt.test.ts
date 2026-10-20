@@ -66,7 +66,7 @@ describe('buildCompanionPrompt', () => {
   it('tells a real story when asked, and offers stories, riddles and little chats on its own', () => {
     const p = buildCompanionPrompt(base);
     const check = p.slice(p.indexOf('Before you answer, check:'));
-    expect(p).toContain('tell a gentle, cheerful made-up story of about 80 to 150 words');
+    expect(p).toContain('tell a gentle, cheerful made-up story of about 150 to 250 words');
     expect(p).toContain('tell stories, short poems, riddles and jokes');
     expect(check).toContain('unless she asked for a story');
   });
@@ -99,5 +99,25 @@ describe('languageName: Remi talks to families worldwide', () => {
     expect(languageName('fil-PH')).toBe('Filipino');
     expect(languageName('ar-SA')).toBe('Arabic');
     expect(languageName('sw-KE')).toBe('Swahili');
+  });
+});
+
+import { wantsStory } from '@/core/companion-prompt';
+
+describe('stories', () => {
+  it('knows when she asks for a story, in many languages', () => {
+    for (const s of ['Remi, tell me a story', 'tell me another one of your stories', 'ek kahani sunao', 'मुझे एक कहानी सुनाओ', 'cuéntame un cuento', 'raconte-moi une histoire', 'erzähl mir eine Geschichte', 'conta uma história', 'احكي لي قصة', '讲个故事', 'お話をして', 'একটা গল্প বলো']) {
+      expect(wantsStory(s)).toBe(true);
+    }
+    for (const s of ['what day is it', 'I had my tea', 'is Rohan coming']) expect(wantsStory(s)).toBe(false);
+  });
+
+  it('turns Remi into a real storyteller when she asks for one', () => {
+    const p = buildCompanionPrompt({ ...base, story: true });
+    expect(p).toContain('wonderful storyteller');
+    expect(p).toContain('150 to 250 words');
+    expect(p).toContain('Panchatantra');
+    expect(p).toContain('Nothing scary or sad');
+    expect(buildCompanionPrompt(base)).not.toContain('wonderful storyteller');
   });
 });

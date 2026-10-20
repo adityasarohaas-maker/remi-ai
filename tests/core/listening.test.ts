@@ -140,3 +140,47 @@ describe('a conversation stays open', () => {
     expect(classifyHeard('how are you doing', { nowMs: 30_000 + 1_000_000, lastSpokeAtMs: 1_000_000 }).kind).toBe('followup');
   });
 });
+
+import { isBargeIn, isEcho } from '@/core/listening';
+
+describe('barge-in: telling her voice from Remi’s own, heard back through the speaker', () => {
+  const spoken = 'Once there was a little rabbit named Pip who loved to hop through the garden. One sunny morning, Pip found a bright orange carrot.';
+
+  it('treats Remi’s own words coming back as echo, even when the microphone mishears a few', () => {
+    expect(isEcho('once there was a little rabbit named Pip', spoken)).toBe(true);
+    expect(isEcho('who loved to hop through the gardens', spoken)).toBe(true);
+    expect(isEcho('one sunny morning pep found a bright orange carrot', spoken)).toBe(true);
+    expect(isBargeIn('once there was a little rabbit named Pip', spoken)).toBe(false);
+  });
+
+  it('notices her speaking over Remi', () => {
+    expect(isBargeIn('I want a different story', spoken)).toBe(true);
+    expect(isBargeIn('rabbit named Pip I want to sleep now', spoken)).toBe(true);
+    expect(isEcho('I want a different story', spoken)).toBe(false);
+  });
+
+  it('stops for a single stop word or Remi’s name, in any language', () => {
+    for (const w of ['stop', 'wait', 'Remi', 'ruko', 'रुको', 'बस', 'espera', 'arrête', 'stopp', 'توقف', '停', 'ちょっと待って']) {
+      expect(isBargeIn(`garden ${w}`, spoken)).toBe(true);
+    }
+  });
+
+  it('does not stop for one stray misheard word', () => {
+    expect(isBargeIn('hop through the garden um', spoken)).toBe(false);
+  });
+
+  it('works for Hindi', () => {
+    const hindi = 'एक छोटी सी बगिया में एक छोटा सा पौधा था। हर सुबह वह धूप में खिलता था।';
+    expect(isEcho('एक छोटी सी बगिया में एक छोटा सा पौधा', hindi)).toBe(true);
+    expect(isBargeIn('मुझे कुछ और सुनाओ अब', hindi)).toBe(true);
+  });
+});
+
+import { isStopOnly } from '@/core/listening';
+
+describe('isStopOnly', () => {
+  it('is a plain "stop", which needs quiet rather than an answer', () => {
+    for (const s of ['stop', 'Remi stop', 'wait wait', 'ruko', 'बस करो', '停']) expect(isStopOnly(s)).toBe(true);
+    for (const s of ['stop telling me about rabbits and tell me about birds', 'tell me another story']) expect(isStopOnly(s)).toBe(false);
+  });
+});

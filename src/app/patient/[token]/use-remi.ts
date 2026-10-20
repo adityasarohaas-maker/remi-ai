@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createListener, playClip, speakAsync, speechRecognitionCtor, type ListenerState } from '@/lib/speech';
-import { classifyHeard, isDoneReply, shouldCheckIn, checkInLine, voiceCommand } from '@/core/listening';
+import { classifyHeard, isBargeIn, isDoneReply, isEcho, isStopOnly, shouldCheckIn, checkInLine, voiceCommand } from '@/core/listening';
 import { speakableText, takeSentences } from '@/core/stream-speech';
 import { detectSafetyWords } from '@/core/safety';
 import { wakeReply, wellDoneMessage } from '@/core/messages';
@@ -57,9 +57,16 @@ export function useRemi(o: {
   const [turns, setTurns] = useState<Turn[]>([]);
   const listener = useRef<ReturnType<typeof createListener> | null>(null);
   const held = useRef(false);        // the Talk screen has the microphone
+  const micBlocked = useRef(false);  // the listener gave up; a tap on Kodi starts a new one
   const speaking = useRef(0);
   const busy = useRef(false);
   const armed = useRef(false);       // she tapped the orb: the next words are for Remi
+  // Barge-in: the microphone stays on while Remi speaks, so she can talk over Remi to stop it.
+  // What Remi said lately tells her words apart from Remi's own voice coming back. ?bargein=0 turns it off.
+  const bargeIn = useRef(true);
+  const echo = useRef<string[]>([]);
+  const talkAbort = useRef<AbortController | null>(null);
+  const asking = useRef('');          // what she asked for the reply in progress
   const lastSpokeAt = useRef(0);
   const lastWarm = useRef(0);
   const lastActivity = useRef(0);    // set on start
@@ -97,11 +104,12 @@ export function useRemi(o: {
   const speakNow = useCallback(async (text: string, show: boolean | 'append', clip?: Promise<Blob | null>, forTurn = turn.current) => {
     if (!text || forTurn !== turn.current) return;
     speaking.current++;
-    listener.current?.pause();
+    if (!bargeIn.current) listener.current?.pause();
     try {
       // the natural cloud voice when it's there; the browser's voice if it isn't or fails
       const audio = clip ? await clip : null;
       if (forTurn !== turn.current) return; // she cut in while the clip was on its way
+      echo.current = [...echo.current.slice(-3), text];
       setStatus((s) => (s === 'blocked' || s === 'off' || s === 'unsupported' ? s : 'speaking'));
       if (show === 'append' && !freshCaption.current) setReply((r) => (r ? `${r} ${text}` : text));
       else if (show) { setReply(text); freshCaption.current = false; }
@@ -133,62 +141,108 @@ export function useRemi(o: {
   const converse = useCallback(async (text: string, mode: 'addressed' | 'followup' | 'overheard'): Promise<{ text: string; mood?: string }> => {
     // With the cloud voice, the server voices the reply as it writes it and sends words and audio together.
     const voice = latest.current.cloudVoice && !!player.current;
-    const res = await latest.current.api('talk', {
-      method: 'POST',
-      headers: { accept: 'application/x-ndjson' },
-      body: JSON.stringify({ text, mode, language: latest.current.language, voice }),
-    });
-    freshCaption.current = true;
-    if (!res.body || !res.headers.get('content-type')?.includes('ndjson')) {
-      const data = await res.json().catch(() => ({}));
-      const answer = typeof data.reply === 'string' ? data.reply : '';
-      if (answer) await say(answer);
-      return { text: answer, mood: data.mood };
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '', raw = '', spokenUpTo = 0;
+    // she can cut in at any moment: interrupt() aborts this reply, and what Remi already said stands
+    const ctrl = new AbortController();
+    talkAbort.current = ctrl;
     const said: string[] = [];
-    let final: { reply?: string | null; mood?: string } | null = null;
-    const myTurn = turn.current;
-    const speak = (s: string, audio?: Blob | null) => {
-      if (turn.current !== myTurn) return; // she interrupted: the rest of this reply goes unsaid
-      said.push(s);
-      enqueue(s, 'append', audio);
-    };
-    const pump = (done: boolean) => {
-      const { sentences, upTo } = takeSentences(speakableText(raw, done), spokenUpTo, done, { firstPhrase: true });
-      spokenUpTo = upTo;
-      for (const s of sentences) speak(s);
-    };
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let nl: number;
-      while ((nl = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, nl);
-        buffer = buffer.slice(nl + 1);
-        if (!line.trim()) continue;
-        const msg = JSON.parse(line) as { delta?: string; say?: string; audio?: string; done?: boolean; reply?: string | null; mood?: string };
-        if (msg.say) speak(msg.say, msg.audio ? mp3(msg.audio) : null);
-        if (msg.delta) { raw += msg.delta; pump(false); }
-        if (msg.done) final = msg;
-      }
+    try {
+      return await streamReply(ctrl.signal);
+    } catch (e) {
+      if (ctrl.signal.aborted) return { text: said.join(' ') };
+      throw e;
+    } finally {
+      if (talkAbort.current === ctrl) talkAbort.current = null;
     }
-    if (!final || final.reply == null) { await queue.current; return { text: said.join(' ') }; } // silence (SKIP), or a broken stream
-    // fallback, clock, family words: no stream to speak from (the server voices these too when it can)
-    if (!said.length && !raw) { await say(final.reply); return { text: final.reply, mood: final.mood }; }
-    if (raw) pump(true);
-    await queue.current;
-    return { text: said.join(' '), mood: final.mood };
+
+    async function streamReply(signal: AbortSignal): Promise<{ text: string; mood?: string }> {
+      const res = await latest.current.api('talk', {
+        method: 'POST',
+        headers: { accept: 'application/x-ndjson' },
+        body: JSON.stringify({ text, mode, language: latest.current.language, voice }),
+        signal,
+      });
+      freshCaption.current = true;
+      if (!res.body || !res.headers.get('content-type')?.includes('ndjson')) {
+        const data = await res.json().catch(() => ({}));
+        const answer = typeof data.reply === 'string' ? data.reply : '';
+        if (answer) await say(answer);
+        return { text: answer, mood: data.mood };
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '', raw = '', spokenUpTo = 0;
+      let final: { reply?: string | null; mood?: string } | null = null;
+      const myTurn = turn.current;
+      const speak = (s: string, audio?: Blob | null) => {
+        if (turn.current !== myTurn) return; // she interrupted: the rest of this reply goes unsaid
+        said.push(s);
+        enqueue(s, 'append', audio);
+      };
+      const pump = (done: boolean) => {
+        const { sentences, upTo } = takeSentences(speakableText(raw, done), spokenUpTo, done, { firstPhrase: true });
+        spokenUpTo = upTo;
+        for (const s of sentences) speak(s);
+      };
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, nl);
+          buffer = buffer.slice(nl + 1);
+          if (!line.trim()) continue;
+          const msg = JSON.parse(line) as { delta?: string; say?: string; audio?: string; done?: boolean; reply?: string | null; mood?: string };
+          if (msg.say) speak(msg.say, msg.audio ? mp3(msg.audio) : null);
+          if (msg.delta) { raw += msg.delta; pump(false); }
+          if (msg.done) final = msg;
+        }
+      }
+      if (!final || final.reply == null) { await queue.current; return { text: said.join(' ') }; } // silence (SKIP), or a broken stream
+      // fallback, clock, family words: no stream to speak from (the server voices these too when it can)
+      if (!said.length && !raw) { await say(final.reply); return { text: final.reply, mood: final.mood }; }
+      if (raw) pump(true);
+      await queue.current;
+      return { text: said.join(' '), mood: final.mood };
+    }
   }, [enqueue, say]);
+
+  /** She cut in (by voice or a tap): Remi stops mid-sentence, drops the rest of the reply, and listens. */
+  const interrupt = useCallback(() => {
+    turn.current++;
+    talkAbort.current?.abort();
+    window.speechSynthesis?.cancel();
+    if (player.current && !player.current.paused) {
+      player.current.pause();
+      player.current.onended?.(new Event('ended'));
+    }
+  }, []);
+
+  /** Did that come from her, or is it Remi's own voice heard back through the speaker? */
+  const fromHer = useCallback((text: string) => {
+    if (!bargeIn.current) return true;
+    const spoken = echo.current.join(' ');
+    if (speaking.current) return isBargeIn(text, spoken);
+    // the last words can still arrive just after Remi stops
+    return Date.now() - lastSpokeAt.current > 2000 || isBargeIn(text, spoken) || !isEcho(text, spoken);
+  }, []);
 
   const handle = useCallback(async (raw: string) => {
     const now = Date.now();
+    if (!fromHer(raw)) { note(raw, 'echo of Remi'); return; }
     lastActivity.current = now;
     setLive('');
     const { language, preferredName, markDone, go } = latest.current;
+
+    if (speaking.current || busy.current) {
+      // she talked over Remi: stop, and answer her instead
+      if (isStopOnly(raw)) { interrupt(); note(raw, 'stopped by voice'); setReply(''); setStatus('hearing'); armed.current = true; return; }
+      // still thinking, nothing said yet: she was adding to what she'd asked, so answer all of it
+      if (busy.current && !speaking.current && asking.current) raw = `${asking.current} ${raw}`;
+      interrupt();
+      armed.current = true;
+      for (let i = 0; i < 40 && busy.current; i++) await new Promise((r) => setTimeout(r, 50)); // the old reply winds down
+    }
 
     const pending = pendingReminder.current;
     if (pending && now < pending.until && isDoneReply(raw)) {
@@ -225,11 +279,14 @@ export function useRemi(o: {
     // One question at a time; but a cry for help never waits.
     if (busy.current && !detectSafetyWords(raw).length) { note(raw, 'dropped: still answering'); return; }
     busy.current = true;
+    asking.current = h.text;
     const previous = { you: heard, remi: reply };
     // a reply to Remi gets the same instant 'thinking' as its name does: she sees she was heard
     if (h.kind !== 'overheard') { setHeard(h.text); setReply(''); setStatus('thinking'); }
+    const startTurn = turn.current;
     try {
       const result = await converse(h.text, h.kind);
+      if (turn.current !== startTurn) { note(h.text, 'interrupted'); return; } // she cut in; her new words get the answer
       const answer = result.text;
       note(h.text, answer ? `replied (${h.kind})` : `stayed quiet (${h.kind})`);
       if (answer) {
@@ -243,12 +300,12 @@ export function useRemi(o: {
       }
     } catch (e) {
       note(h.text, `error: ${(e as Error).message}`);
-      if (h.kind === 'addressed') await say(t.retry);
+      if (h.kind === 'addressed' && turn.current === startTurn) await say(t.retry);
     } finally {
       busy.current = false;
       if (!speaking.current) idle();
     }
-  }, [say, converse, idle, t, heard, reply, feel, gesture, note]);
+  }, [say, converse, idle, t, heard, reply, feel, gesture, note, fromHer, interrupt]);
 
   const handleRef = useRef(handle);
   useEffect(() => { handleRef.current = handle; }, [handle]);
@@ -262,6 +319,8 @@ export function useRemi(o: {
       settleMs: SETTLE_MS,
       onText: (text) => { handleRef.current(text); },
       onInterim: (text) => {
+        if (!fromHer(text)) return; // Remi hearing itself
+        if (speaking.current) { interrupt(); armed.current = true; setReply(''); } // she talked over Remi: stop now
         // she has started speaking: wake the reply and voice servers now, so they're warm when she finishes
         if (Date.now() - lastWarm.current > 20_000) {
           lastWarm.current = Date.now();
@@ -277,8 +336,7 @@ export function useRemi(o: {
         if (s === 'blocked') setStatus('blocked');
       },
     });
-  }, []);
-  const micBlocked = useRef(false);
+  }, [fromHer, interrupt]);
 
   /** Needs a tap: browsers allow the microphone and sound only after one. */
   const start = useCallback(async () => {
@@ -287,6 +345,7 @@ export function useRemi(o: {
       player.current.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
       player.current.play().catch(() => {}); // this tap unlocks sound for the rest of the visit
     }
+    bargeIn.current = new URLSearchParams(window.location.search).get('bargein') !== '0';
     listener.current = makeListener();
     if (listener.current) {
       listener.current.start();
@@ -310,17 +369,6 @@ export function useRemi(o: {
     listener.current?.start();
     if (speaking.current || held.current) listener.current?.pause();
   }, [o.language, makeListener]);
-
-  /** She tapped the orb: whatever she says next is for Remi, no name needed. */
-  /** She cut in: Remi stops mid-sentence, drops the rest of the reply, and listens. */
-  const interrupt = useCallback(() => {
-    turn.current++;
-    window.speechSynthesis?.cancel();
-    if (player.current && !player.current.paused) {
-      player.current.pause();
-      player.current.onended?.(new Event('ended'));
-    }
-  }, []);
 
   const listenNow = useCallback(() => {
     if (!listener.current) return;

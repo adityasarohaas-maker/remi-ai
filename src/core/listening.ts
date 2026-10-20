@@ -45,6 +45,61 @@ const DONE = word([
   'হ্যাঁ', 'হয়ে গেছে', 'ஆமாம்', 'முடிந்தது', 'అవును', 'అయిపోయింది', 'ہاں', 'جی', 'ہو گیا',
 ].join('|'));
 
+// Barge-in: the microphone stays on while Remi speaks, so it hears Remi through the speaker. Words
+// Remi is saying are echo; words Remi isn't saying are her, talking over Remi.
+const STOP = word([
+  'stop', 'wait', 'hold on', 'enough', 'quiet', 'shush', 'ruko', 'ruk', 'bas', 'chup', 'रुको', 'रुकिए', 'बस', 'चुप',
+  'para', 'espera', 'basta', 'arrête', 'attends', 'stopp', 'warte', 'halt', 'pare', 'espere', 'توقف', 'انتظر', 'كفى',
+  'থামো', 'நிறுத்து', 'ఆపు', 'رکو', 'بس', 'थांब',
+].join('|'));
+const STOP_CJK = /停|等等|别说了|待って|止めて|ストップ/u;
+const NAME_RE = new RegExp(NAME, 'iu');
+
+const tokens = (s: string) =>
+  s.toLowerCase().match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]|[\p{L}\p{M}\p{N}]+/gu) ?? [];
+
+function near(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length < 3 || b.length < 3 || Math.abs(a.length - b.length) > 2) return false;
+  const max = a.length >= 7 ? 2 : 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (Math.min(...row) > max) return false;
+    prev = row;
+  }
+  return prev[b.length] <= max;
+}
+
+/** Heard words that Remi is not saying (allowing for the microphone mishearing a word or two). */
+function foreignWords(heard: string, spoken: string): { foreign: string[]; total: number } {
+  const said = tokens(spoken);
+  const exact = new Set(said);
+  const words = tokens(heard);
+  return { foreign: words.filter((w) => !exact.has(w) && !said.some((s) => near(w, s))), total: words.length };
+}
+
+/** What the microphone heard is just Remi's own voice coming back. */
+export function isEcho(heard: string, spoken: string): boolean {
+  const { foreign, total } = foreignWords(heard, spoken);
+  return total > 0 && foreign.length <= Math.max(1, Math.floor(total * 0.2));
+}
+
+/** She is talking over Remi: a stop word or Remi's name, or words of her own. */
+export function isBargeIn(heard: string, spoken: string): boolean {
+  const { foreign, total } = foreignWords(heard, spoken);
+  const own = foreign.join(' ');
+  if (STOP.test(own) || NAME_RE.test(own) || (STOP_CJK.test(heard) && !STOP_CJK.test(spoken))) return true;
+  return foreign.length >= 3 || (foreign.length >= 2 && foreign.length / total >= 0.5);
+}
+
+/** Only "stop" / "wait" (maybe with Remi's name): she wants quiet, not an answer. */
+export function isStopOnly(text: string): boolean {
+  const rest = tokens(text.replace(new RegExp(NAME, 'giu'), ''));
+  return rest.length <= 3 && (STOP.test(text) || STOP_CJK.test(text));
+}
+
 /** A reply to a spoken reminder that means it has been done. */
 export function isDoneReply(text: string): boolean {
   if (/[?？]\s*$/.test(text) || NOT_DONE.test(text)) return false;

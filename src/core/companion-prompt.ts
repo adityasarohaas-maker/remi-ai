@@ -29,6 +29,26 @@ export interface CompanionPromptInput {
   sensitive: Guidance | null; safety: SafetyCategory[];
   /** Not certainly said to Remi: overheard near the tablet, or said just after Remi spoke. */
   heardAs?: 'overheard' | 'followup';
+  /** She asked for a story: Remi becomes a proper storyteller for this reply. */
+  story?: boolean;
+}
+
+const STORY = new RegExp(String.raw`(?<![\p{L}\p{M}])(?:stor(?:y|ies)|tale|fable|kahani|kahaani|kissa|qissa|कहानी|कहानियाँ|किस्सा|cuento|historia|histoire|conte|geschichte|märchen|história|conto|قصة|حكاية|গল্প|கதை|కథ|کہانی|गोष्ट)(?![\p{L}\p{M}])|故事|物語|お話|昔話`, 'iu');
+
+/** She is asking Remi to tell a story. */
+export function wantsStory(text: string): boolean {
+  return STORY.test(text);
+}
+
+function storySection(who: string): string {
+  return `${who} asked for a story. Be a wonderful storyteller, like a favourite aunt at bedtime:
+- 150 to 250 words, told out loud, in short sentences.
+- A real story: a lively main character with a name, a small problem or mystery, a funny or surprising turn, and a warm, satisfying ending.
+- Little details ${who} can see, smell and hear (rain on hot earth, a squeaky gate, jalebis frying in the market).
+- A line or two of dialogue in the characters' own voices, and gentle humour.
+- Choose a different kind each time: a clever-animal fable like the Panchatantra or Aesop, a Tenali Raman or Birbal wit tale, a village or market adventure, a cosy fairy tale, a festival, a kind stranger, a garden. Retell a classic or invent a new one, set where ${who} would feel at home. You may weave in something ${who} loves from the notes above.
+- Nothing scary or sad: no illness, death, loss or danger that lingers.
+- Plain words only, no symbols or headings. No questions inside the story. End with one warm line, then stop.`;
 }
 
 const APPROACH: Record<Guidance['approach'], (who: string, call: string) => string> = {
@@ -53,7 +73,7 @@ On the tablet you look like a little forest spirit with a leaf on your head: pla
     `How you speak:
 - Talk like a warm friend sitting beside her, not like an assistant or a teacher. Use everyday words and contractions ("I'm", "you're"), and react to what she just said before anything else ("Oh, that sounds lovely!").
 - Keep everyday replies under 25 words: usually one short sentence, sometimes two. Spoken out loud, short is kind.
-- When ${who} asks for a story (or a poem, a riddle, a joke, or just says "talk to me"), give it gladly: tell a gentle, cheerful made-up story of about 80 to 150 words, in short spoken sentences, with a name or two and a happy ending (animals, gardens, markets, festivals, the sea, a train journey). Then stop and let ${who} react.
+- When ${who} asks for a story (or a poem, a riddle, a joke, or just says "talk to me"), give it gladly: tell a gentle, cheerful made-up story of about 150 to 250 words, in short spoken sentences, with a name or two, a little surprise and a happy ending (animals, gardens, markets, festivals, the sea, a train journey). Then stop and let ${who} react.
 - If ${who} seems bored or lonely, sometimes offer one: a little story, a riddle, or a question about something ${who} loves.
 - Be lively: a small "Ooh!", a gentle tease, a tiny observation of your own ("I bet the roses smell wonderful today"). Never lecture or explain at length.
 - Do not end every reply with a question. Often just share the moment, agree, or say something kind. Ask at most one simple question, and only sometimes.
@@ -84,6 +104,7 @@ Follow the family's guidance closely. Do not say that anyone has died unless the
   if (i.heardAs === 'followup' && !i.safety.length) {
     sections.push(`You spoke a moment ago. What ${who} said now may be a reply to you, or may be said to someone else in the room. If it is for you, answer as usual. If it is not, reply with exactly SKIP and nothing else.`);
   }
+  if (i.story && !i.safety.length) sections.push(storySection(who));
   if (i.safety.length) {
     sections.push(`${who} may be in difficulty (${i.safety.join(', ')}). Reassure them calmly and tell them you are letting ${contact} know right now. Do not promise anything else.`);
   }

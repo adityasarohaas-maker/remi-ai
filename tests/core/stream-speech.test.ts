@@ -129,3 +129,9 @@ describe('createSpokenReply: the server voices the reply as it is written', () =
     expect(speaker.said).toBe('');
   });
 });
+
+describe('speakableText: no markdown read aloud', () => {
+  it('drops bold, italics and heading marks', () => {
+    expect(speakableText('## The Cat\n**Moti** said *snap!* and `ran`.', true)).toBe('The Cat\nMoti said snap! and ran.');
+  });
+});

@@ -2,12 +2,15 @@ import type { HouseholdContext } from './types';
 import type { ChatMessage } from '@/lib/nebius';
 import type { AlertReason } from '@/lib/alerts';
 import type { FaceSample } from './face-match';
+
+/** purpose 'story': a model that tells stories well (the everyday model is picked for speed). */
+export type ChatOpts = { maxTokens: number; temperature: number; purpose?: 'story' };
 import { localParts } from './time';
 import { reminderStates } from './reminders';
 import { detectSafetyWords } from './safety';
 import { findSensitiveGuidance } from './sensitive';
 import { parseMoodTag, extractTellFamily, type Mood } from './mood';
-import { buildCompanionPrompt, languageName } from './companion-prompt';
+import { buildCompanionPrompt, languageName, wantsStory } from './companion-prompt';
 import { fallbackReply, helpSentMessage, timeAnswer } from './messages';
 import { worthJoining, JOIN_IN_COOLDOWN_SECONDS } from './listening';
 import { isSupportedLanguage } from './voices';
@@ -25,9 +28,9 @@ export interface CoreDeps {
   recentTurns(householdId: string, since: Date): Promise<{ text: string; reply: string; mood?: string }[]>;
   /** Atomically takes one token from a fixed window; false when the window is full. */
   takeRateToken(householdId: string, bucket: string, limit: number, windowSeconds: number): Promise<boolean>;
-  chat(messages: ChatMessage[], opts: { maxTokens: number; temperature: number }): Promise<string>;
+  chat(messages: ChatMessage[], opts: ChatOpts): Promise<string>;
   /** Same as chat, but calls onDelta with each piece of text as it arrives; resolves to the full text. */
-  chatStream?(messages: ChatMessage[], opts: { maxTokens: number; temperature: number }, onDelta: (text: string) => void): Promise<string>;
+  chatStream?(messages: ChatMessage[], opts: ChatOpts, onDelta: (text: string) => void): Promise<string>;
   logEvent(householdId: string, type: string, payload: Record<string, unknown>): Promise<void>;
   alert(householdId: string, reason: AlertReason, detail: string): Promise<void>;
   faceGallery(householdId: string): Promise<FaceSample[]>;
@@ -89,11 +92,12 @@ export async function handleTalk(deps: CoreDeps, input: {
     alerts.push(deps.alert(householdId, 'call_request', `${h.preferredName} is asking about ${sensitive.topic}. Please call ${sensitive.callPersonName ?? h.primaryContactName ?? 'them'} now.`));
   }
 
+  const story = wantsStory(text) && !safety.length;
   const system = buildCompanionPrompt({
     preferredName: h.preferredName, language, about: h.about,
     now: local, people: ctx.people,
     routine: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
-    primaryContactName: h.primaryContactName, sensitive, safety, heardAs: input.mode === 'addressed' ? undefined : input.mode,
+    primaryContactName: h.primaryContactName, sensitive, safety, heardAs: input.mode === 'addressed' ? undefined : input.mode, story,
   });
   const history = (await historyP).slice(-6);
   const messages: ChatMessage[] = [
@@ -112,8 +116,8 @@ export async function handleTalk(deps: CoreDeps, input: {
   let fallback = false;
   let toldFamily: string | null = null;
   try {
-    // room for a story when she asks for one; the prompt keeps everyday replies short
-    const opts = { maxTokens: 400, temperature: 0.6 };
+    // a story gets the storyteller model and room to tell it; the prompt keeps everyday replies short
+    const opts: ChatOpts = story ? { maxTokens: 700, temperature: 0.9, purpose: 'story' } : { maxTokens: 400, temperature: 0.6 };
     const raw = input.onDelta && deps.chatStream
       ? await deps.chatStream(messages, opts, input.onDelta)
       : await deps.chat(messages, opts);
