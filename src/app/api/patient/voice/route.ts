@@ -1,11 +1,10 @@
 import { requireDevice } from '@/lib/household';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { supabaseDeps } from '@/lib/deps';
-import { cloudVoiceConfigured, synthesize } from '@/lib/azure-tts';
-import { isSupportedLanguage } from '@/core/voices';
+import { cloudVoiceConfigured, synthesize, VOICE_PER_MIN } from '@/lib/azure-tts';
+import { isSupportedLanguage, voiceLocale } from '@/core/voices';
 
 const MAX_CHARS = 400;      // one sentence or two; Remi speaks a reply a sentence at a time
-const VOICE_PER_MIN = 90;   // per household
 
 /** Remi's natural voice for one piece of a reply, as mp3. 204 = no cloud voice: the tablet uses its own. */
 export async function POST(req: Request) {
@@ -20,8 +19,7 @@ export async function POST(req: Request) {
   const household = typeof body?.language === 'string' && isSupportedLanguage(body.language)
     ? body.language
     : (await supabaseAdmin().from('households').select('language').eq('id', householdId).single()).data?.language ?? 'en-US';
-  // Remi answers Hindi in Hindi even in an English household; speak it with the Hindi voice.
-  const locale = /[ऀ-ॿ]/.test(text) && !/^(hi|mr)/i.test(household) ? 'hi-IN' : household;
+  const locale = voiceLocale(text, household);
   // Remi is mid-sentence while this runs: check the limit and make the audio at the same time.
   const audio = synthesize(text, locale);
   audio.catch(() => {}); // handled below; never an unhandled rejection when the limit says no

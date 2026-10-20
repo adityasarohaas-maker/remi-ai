@@ -50,6 +50,11 @@ export function isSupportedLanguage(code: string): boolean {
   return LANGUAGES.some((l) => l.code === code);
 }
 
+/** Remi answers Hindi in Hindi even in an English household; such a reply gets the Hindi voice. */
+export function voiceLocale(text: string, language: string): string {
+  return /[ऀ-ॿ]/.test(text) && !/^(hi|mr|ne)/i.test(language) ? 'hi-IN' : language;
+}
+
 export function cloudVoiceFor(locale: string): string {
   const exact = LANGUAGES.find((l) => l.code.toLowerCase() === locale.toLowerCase());
   if (exact) return exact.voice;

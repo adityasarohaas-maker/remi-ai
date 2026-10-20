@@ -20,6 +20,8 @@ const SETTLE_MS = 500;            // live words unchanged this long = she has fi
 /** The orb listens for these instead of re-rendering on every word. */
 export const REMI_BEAT = 'remi-beat';
 const beat = (kind: 'word' | 'hear') => window.dispatchEvent(new CustomEvent(REMI_BEAT, { detail: kind }));
+/** A clip of Remi's voice that came inside the reply stream (base64). */
+const mp3 = (base64: string) => new Blob([Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))], { type: 'audio/mpeg' });
 
 /**
  * Hands-free Remi: listens all the time, answers when addressed, joins in now and then,
@@ -90,15 +92,19 @@ export function useRemi(o: {
   // Each interruption starts a new turn; anything queued for an older turn is dropped.
   const turn = useRef(0);
 
-  const speakNow = useCallback(async (text: string, show: boolean, clip?: Promise<Blob | null>, forTurn = turn.current) => {
+  // Captions follow the voice: a reply's words appear sentence by sentence as Remi says them.
+  const freshCaption = useRef(true);
+  const speakNow = useCallback(async (text: string, show: boolean | 'append', clip?: Promise<Blob | null>, forTurn = turn.current) => {
     if (!text || forTurn !== turn.current) return;
     speaking.current++;
     listener.current?.pause();
-    setStatus((s) => (s === 'blocked' || s === 'off' || s === 'unsupported' ? s : 'speaking'));
-    if (show) setReply(text);
     try {
       // the natural cloud voice when it's there; the browser's voice if it isn't or fails
       const audio = clip ? await clip : null;
+      if (forTurn !== turn.current) return; // she cut in while the clip was on its way
+      setStatus((s) => (s === 'blocked' || s === 'off' || s === 'unsupported' ? s : 'speaking'));
+      if (show === 'append' && !freshCaption.current) setReply((r) => (r ? `${r} ${text}` : text));
+      else if (show) { setReply(text); freshCaption.current = false; }
       const played = audio && player.current ? await playClip(player.current, audio) : false;
       if (!played) await speakAsync(text, latest.current.language, undefined, { onWord: () => beat('word') });
     } finally {
@@ -112,9 +118,10 @@ export function useRemi(o: {
 
   /** Remi's voice. One thing at a time, and the listener pauses so Remi never hears itself. */
   const queue = useRef<Promise<void>>(Promise.resolve());
-  const enqueue = useCallback((text: string, show: boolean): Promise<void> => {
-    // fetch the audio now, so the next sentence is ready while this one plays
-    const clip = latest.current.cloudVoice && player.current ? fetchVoice(text) : undefined;
+  const enqueue = useCallback((text: string, show: boolean | 'append', ready?: Blob | null): Promise<void> => {
+    // audio that came with the reply plays as is; otherwise fetch it now, so it's ready when its turn comes
+    const clip = ready !== undefined ? Promise.resolve(ready)
+      : latest.current.cloudVoice && player.current ? fetchVoice(text) : undefined;
     const forTurn = turn.current;
     const next = queue.current.then(() => speakNow(text, show, clip, forTurn));
     queue.current = next.catch(() => {});
@@ -124,11 +131,14 @@ export function useRemi(o: {
 
   /** Sends her words; speaks Remi's reply sentence by sentence as it streams in. Returns what Remi said. */
   const converse = useCallback(async (text: string, mode: 'addressed' | 'followup' | 'overheard'): Promise<{ text: string; mood?: string }> => {
+    // With the cloud voice, the server voices the reply as it writes it and sends words and audio together.
+    const voice = latest.current.cloudVoice && !!player.current;
     const res = await latest.current.api('talk', {
       method: 'POST',
       headers: { accept: 'application/x-ndjson' },
-      body: JSON.stringify({ text, mode, language: latest.current.language }),
+      body: JSON.stringify({ text, mode, language: latest.current.language, voice }),
     });
+    freshCaption.current = true;
     if (!res.body || !res.headers.get('content-type')?.includes('ndjson')) {
       const data = await res.json().catch(() => ({}));
       const answer = typeof data.reply === 'string' ? data.reply : '';
@@ -137,16 +147,19 @@ export function useRemi(o: {
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '', raw = '', spokenUpTo = 0, shown = '';
+    let buffer = '', raw = '', spokenUpTo = 0;
+    const said: string[] = [];
     let final: { reply?: string | null; mood?: string } | null = null;
     const myTurn = turn.current;
-    const pump = (done: boolean) => {
+    const speak = (s: string, audio?: Blob | null) => {
       if (turn.current !== myTurn) return; // she interrupted: the rest of this reply goes unsaid
-      const speakable = speakableText(raw, done);
-      if (speakable && speakable !== shown) { shown = speakable; setReply(speakable); }
-      const { sentences, upTo } = takeSentences(speakable, spokenUpTo, done, { firstPhrase: true });
+      said.push(s);
+      enqueue(s, 'append', audio);
+    };
+    const pump = (done: boolean) => {
+      const { sentences, upTo } = takeSentences(speakableText(raw, done), spokenUpTo, done, { firstPhrase: true });
       spokenUpTo = upTo;
-      for (const s of sentences) enqueue(s, false);
+      for (const s of sentences) speak(s);
     };
     for (;;) {
       const { value, done } = await reader.read();
@@ -157,16 +170,18 @@ export function useRemi(o: {
         const line = buffer.slice(0, nl);
         buffer = buffer.slice(nl + 1);
         if (!line.trim()) continue;
-        const msg = JSON.parse(line) as { delta?: string; done?: boolean; reply?: string | null; mood?: string };
+        const msg = JSON.parse(line) as { delta?: string; say?: string; audio?: string; done?: boolean; reply?: string | null; mood?: string };
+        if (msg.say) speak(msg.say, msg.audio ? mp3(msg.audio) : null);
         if (msg.delta) { raw += msg.delta; pump(false); }
         if (msg.done) final = msg;
       }
     }
-    if (!final || final.reply == null) return { text: shown }; // silence (SKIP), or a stream that broke
-    if (!raw) { await say(final.reply); return { text: final.reply, mood: final.mood }; } // fallback, clock, family words
-    pump(true);
+    if (!final || final.reply == null) { await queue.current; return { text: said.join(' ') }; } // silence (SKIP), or a broken stream
+    // fallback, clock, family words: no stream to speak from (the server voices these too when it can)
+    if (!said.length && !raw) { await say(final.reply); return { text: final.reply, mood: final.mood }; }
+    if (raw) pump(true);
     await queue.current;
-    return { text: shown, mood: final.mood };
+    return { text: said.join(' '), mood: final.mood };
   }, [enqueue, say]);
 
   const handle = useCallback(async (raw: string) => {

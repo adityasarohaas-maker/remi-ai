@@ -78,3 +78,54 @@ describe('takeSentences: speak the first phrase early', () => {
     expect(takeSentences('Hello Avni. Oh, how', 0, false, { firstPhrase: true }).sentences).toEqual(['Hello Avni.']);
   });
 });
+
+import { createSpokenReply } from '@/core/stream-speech';
+
+describe('createSpokenReply: the server voices the reply as it is written', () => {
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  it('makes audio for each sentence as soon as it exists, and sends them in order with their words', async () => {
+    const started: string[] = [];
+    const sent: { say: string; audio?: string }[] = [];
+    let release!: () => void;
+    const slowFirst = new Promise<void>((r) => { release = r; });
+    const speaker = createSpokenReply({
+      synth: async (text) => {
+        started.push(text);
+        if (started.length === 1) await slowFirst; // the first clip takes longer than the second
+        return new TextEncoder().encode(`mp3:${text}`);
+      },
+      send: (line) => sent.push(line),
+    });
+    speaker.delta('Oh, how lovely that sounds. The ');
+    speaker.delta('roses must be out! MOOD: happy');
+    await tick();
+    expect(started).toEqual(['Oh, how lovely that sounds.']); // "The roses must be out!" is not finished yet
+    const done = speaker.finish();
+    await tick();
+    expect(started).toEqual(['Oh, how lovely that sounds.', 'The roses must be out!']);
+    expect(sent).toEqual([]); // the second clip waits for the first, so Remi never speaks out of order
+    release();
+    await done;
+    expect(sent.map((l) => l.say)).toEqual(['Oh, how lovely that sounds.', 'The roses must be out!']);
+    expect(Buffer.from(sent[0].audio!, 'base64').toString()).toBe('mp3:Oh, how lovely that sounds.');
+    expect(speaker.said).toBe('Oh, how lovely that sounds. The roses must be out!');
+  });
+
+  it('still sends the words when the audio fails, so the tablet can say them in its own voice', async () => {
+    const sent: { say: string; audio?: string }[] = [];
+    const speaker = createSpokenReply({ synth: async () => { throw new Error('azure down'); }, send: (l) => sent.push(l) });
+    speaker.delta('Hello there.');
+    await speaker.finish();
+    expect(sent).toEqual([{ say: 'Hello there.' }]);
+  });
+
+  it('says nothing for SKIP', async () => {
+    const sent: unknown[] = [];
+    const speaker = createSpokenReply({ synth: async () => new Uint8Array([1]), send: (l) => sent.push(l) });
+    speaker.delta('SKIP');
+    await speaker.finish();
+    expect(sent).toEqual([]);
+    expect(speaker.said).toBe('');
+  });
+});

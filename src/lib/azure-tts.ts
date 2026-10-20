@@ -4,6 +4,9 @@ import { speechSsml } from '@/core/voices';
 
 type Env = Record<string, string | undefined>;
 
+/** Voice requests per household per minute: one per sentence, plenty for talk, a cap on runaway cost. */
+export const VOICE_PER_MIN = 90;
+
 export function cloudVoiceConfigured(env: Env = process.env): boolean {
   return Boolean(env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION);
 }

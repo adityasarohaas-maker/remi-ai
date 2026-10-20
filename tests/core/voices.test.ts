@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cloudVoiceFor, speechSsml, LANGUAGES, isSupportedLanguage } from '@/core/voices';
+import { cloudVoiceFor, speechSsml, voiceLocale, LANGUAGES, isSupportedLanguage } from '@/core/voices';
 
 describe('cloudVoiceFor: a soft female neural voice for every family, worldwide', () => {
   it('uses the voice for the exact locale', () => {
@@ -27,6 +27,14 @@ describe('isSupportedLanguage', () => {
     expect(isSupportedLanguage('es-ES')).toBe(true);
     expect(isSupportedLanguage('hi-IN')).toBe(true);
     expect(isSupportedLanguage('klingon')).toBe(false);
+  });
+});
+
+describe('voiceLocale', () => {
+  it('uses the household language, but a Hindi reply gets the Hindi voice', () => {
+    expect(voiceLocale('Good morning', 'en-GB')).toBe('en-GB');
+    expect(voiceLocale('सुप्रभात', 'en-GB')).toBe('hi-IN');
+    expect(voiceLocale('सुप्रभात', 'mr-IN')).toBe('mr-IN');
   });
 });
 

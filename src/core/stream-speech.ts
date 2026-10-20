@@ -74,3 +74,37 @@ export function takeSentences(text: string, from: number, done: boolean, o: { fi
   }
   return { sentences, upTo };
 }
+
+export type SpokenLine = { say: string; audio?: string };
+
+/**
+ * The server side of Remi's voice: as the reply streams in, each finished sentence goes to the voice
+ * at once (they are made side by side), and goes out to the tablet with its audio, in order. The
+ * tablet then just plays; it never shows words before Remi says them. No audio = the tablet's own voice.
+ */
+export function createSpokenReply(o: {
+  synth: (text: string) => Promise<Uint8Array | ArrayBuffer | null>;
+  send: (line: SpokenLine) => void;
+}) {
+  let raw = '', upTo = 0;
+  const said: string[] = [];
+  let inOrder: Promise<void> = Promise.resolve();
+  const take = (done: boolean) => {
+    const { sentences, upTo: next } = takeSentences(speakableText(raw, done), upTo, done, { firstPhrase: true });
+    upTo = next;
+    for (const say of sentences) {
+      said.push(say);
+      const audio = o.synth(say).catch(() => null);
+      inOrder = inOrder.then(async () => {
+        const clip = await audio;
+        o.send(clip ? { say, audio: Buffer.from(clip instanceof ArrayBuffer ? new Uint8Array(clip) : clip).toString('base64') } : { say });
+      });
+    }
+  };
+  return {
+    delta(text: string) { raw += text; take(false); },
+    /** The reply is complete: voice the rest, and resolve once every line has gone out. */
+    async finish() { take(true); await inOrder; },
+    get said() { return said.join(' '); },
+  };
+}
