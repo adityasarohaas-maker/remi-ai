@@ -47,32 +47,47 @@ export async function chatText(
 /** Streams the reply: onDelta gets each piece as it arrives. Resolves to the full text, reasoning removed. */
 export async function chatStream(
   messages: ChatMessage[],
-  opts: { model: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxRetries?: number },
+  opts: {
+    model: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxRetries?: number;
+    /** Give up if no words have come by then: some models stall now and then, and a backup is faster. */
+    firstWordsMs?: number;
+  },
   onDelta: (text: string) => void,
 ): Promise<string> {
   const extra = process.env.NEBIUS_DISABLE_THINKING === '1'
     ? { chat_template_kwargs: { enable_thinking: false } }
     : {};
-  // One budget for the whole reply, not just for the first byte.
-  const signal = AbortSignal.timeout(opts.timeoutMs ?? 20_000);
-  const stream = await getClient().chat.completions.create(
-    {
-      model: opts.model,
-      messages,
-      max_tokens: opts.maxTokens ?? 400,
-      temperature: opts.temperature ?? 0.4,
-      stream: true,
-      ...extra,
-    } as OpenAI.Chat.ChatCompletionCreateParamsStreaming,
-    { signal, ...(opts.maxRetries !== undefined ? { maxRetries: opts.maxRetries } : {}) },
-  );
-  let full = '';
-  for await (const chunk of stream) {
-    const piece = chunk.choices[0]?.delta?.content;
-    if (piece) {
-      full += piece;
-      onDelta(piece);
-    }
+  // One budget for the whole reply, not just for the first byte; and a shorter one for the first words.
+  const stalled = new AbortController();
+  const stallTimer = opts.firstWordsMs ? setTimeout(() => stalled.abort(new Error(`no words in ${opts.firstWordsMs} ms`)), opts.firstWordsMs) : undefined;
+  const signal = AbortSignal.any([AbortSignal.timeout(opts.timeoutMs ?? 20_000), stalled.signal]);
+  try {
+    return await streamText();
+  } finally {
+    clearTimeout(stallTimer);
   }
-  return stripReasoning(full);
+
+  async function streamText(): Promise<string> {
+    const stream = await getClient().chat.completions.create(
+      {
+        model: opts.model,
+        messages,
+        max_tokens: opts.maxTokens ?? 400,
+        temperature: opts.temperature ?? 0.4,
+        stream: true,
+        ...extra,
+      } as OpenAI.Chat.ChatCompletionCreateParamsStreaming,
+      { signal, ...(opts.maxRetries !== undefined ? { maxRetries: opts.maxRetries } : {}) },
+    );
+    let full = '';
+    for await (const chunk of stream) {
+      const piece = chunk.choices[0]?.delta?.content;
+      if (piece) {
+        clearTimeout(stallTimer);
+        full += piece;
+        onDelta(piece);
+      }
+    }
+    return stripReasoning(full);
+  }
 }

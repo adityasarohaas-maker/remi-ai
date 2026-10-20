@@ -6,6 +6,9 @@ import { localParts, dayRangeUtc, safeTimeZone } from '@/core/time';
 import type { CoreDeps } from '@/core/talk';
 import type { HouseholdContext, RoutineItem, Approach } from '@/core/types';
 
+// A model that hasn't started its reply by now has stalled (it happens); the backup answers instead.
+const FIRST_WORDS_MS = 3500;
+
 async function withBackup(purpose: 'story' | undefined, run: (model: string) => Promise<string>, mayRetry: () => boolean): Promise<string> {
   const model = purpose === 'story' ? MODELS.story() : MODELS.chat();
   try {
@@ -82,7 +85,11 @@ export function supabaseDeps(): CoreDeps {
       let said = false;
       return withBackup(
         purpose,
-        (model) => chatStream(messages, { model, timeoutMs: purpose === 'story' ? 30_000 : 15_000, maxRetries: 0, ...opts }, (d) => { said = true; onDelta(d); }),
+        (model) => chatStream(
+          messages,
+          { model, timeoutMs: purpose === 'story' ? 30_000 : 15_000, firstWordsMs: FIRST_WORDS_MS, maxRetries: 0, ...opts },
+          (d) => { said = true; onDelta(d); },
+        ),
         () => !said,
       );
     },

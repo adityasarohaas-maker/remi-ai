@@ -118,6 +118,10 @@ describe('stories', () => {
     expect(p).toContain('150 to 250 words');
     expect(p).toContain('Panchatantra');
     expect(p).toContain('Nothing scary or sad');
+    // the rule the model weighs most is the last one: a whole story, no question at the end
+    const check = p.slice(p.indexOf('Before you answer, check:'));
+    expect(check).toContain('a whole story of 150 to 250 words');
+    expect(check).not.toContain('Under 25 words');
     expect(buildCompanionPrompt(base)).not.toContain('wonderful storyteller');
   });
 });

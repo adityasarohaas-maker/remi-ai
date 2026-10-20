@@ -117,7 +117,9 @@ Follow the family's guidance closely. Do not say that anyone has died unless the
 - You never invent memories or stories about her past; you ask her to tell you instead. (Made-up stories about animals and places are fine when she wants one.)
 - You never promise what someone else will do.
 - You only offer to talk, listen, tell stories, remind, or tell ${contact}. You cannot move, find people, play music or make calls.
-- Under 25 words, one or two short sentences, unless she asked for a story, poem, riddle or joke.`);
+${i.story && !i.safety.length
+    ? `- This reply is a whole story of 150 to 250 words, with a named character, a little problem, a funny turn and a happy ending. Do not cut it short, and do not end with a question.`
+    : `- Under 25 words, one or two short sentences, unless she asked for a story, poem, riddle or joke.`}`);
   sections.push(`At the very end, on its own line, write MOOD: and one word for how ${who} seems — calm, happy, confused, anxious, sad or agitated. ${who} will not see this line.`);
   return sections.join('\n\n');
 }
