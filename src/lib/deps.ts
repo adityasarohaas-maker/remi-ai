@@ -4,6 +4,7 @@ import { chatText, chatStream, MODELS } from '@/lib/nebius';
 import { sendAlert } from '@/lib/alerts';
 import { localParts, dayRangeUtc, safeTimeZone } from '@/core/time';
 import type { CoreDeps } from '@/core/talk';
+import { looksLikeReasoning } from '@/core/text';
 import type { HouseholdContext, RoutineItem, Approach } from '@/core/types';
 
 // A model that hasn't started its reply by now has stalled (it happens); the backup answers instead.
@@ -78,18 +79,37 @@ export function supabaseDeps(): CoreDeps {
     // If the model fails before saying a word, the backup model gets one try.
     chat: (messages, { purpose, ...opts }) => withBackup(
       purpose,
-      (model) => chatText(messages, { model, timeoutMs: 15_000, maxRetries: 0, ...opts }),
+      async (model) => {
+        const text = await chatText(messages, { model, timeoutMs: 15_000, maxRetries: 0, ...opts });
+        if (looksLikeReasoning(text.slice(0, 200))) throw new Error(`${model} wrote its reasoning as the reply`);
+        return text;
+      },
       () => true,
     ),
     chatStream: (messages, { purpose, ...opts }, onDelta) => {
       let said = false;
       return withBackup(
         purpose,
-        (model) => chatStream(
-          messages,
-          { model, timeoutMs: purpose === 'story' ? 30_000 : 15_000, firstWordsMs: FIRST_WORDS_MS, maxRetries: 0, ...opts },
-          (d) => { said = true; onDelta(d); },
-        ),
+        async (model) => {
+          // the opening is held back until it can be checked: planning written as the reply never reaches her
+          let opening = '';
+          const check = () => {
+            if (looksLikeReasoning(opening)) throw new Error(`${model} wrote its reasoning as the reply`);
+            said = true;
+            onDelta(opening);
+          };
+          const text = await chatStream(
+            messages,
+            { model, timeoutMs: purpose === 'story' ? 30_000 : 15_000, firstWordsMs: FIRST_WORDS_MS, maxRetries: 0, ...opts },
+            (d) => {
+              if (said) return onDelta(d);
+              opening += d;
+              if (opening.length >= 40 || /[.!?।\n]/.test(opening)) check();
+            },
+          );
+          if (!said && opening) check();
+          return text;
+        },
         () => !said,
       );
     },
