@@ -59,8 +59,12 @@ export function cloudVoiceFor(locale: string): string {
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
-/** The request body for Azure text-to-speech: the family's voice, a touch slower than usual. */
+/**
+ * The request body for Azure text-to-speech: the family's voice at its natural pace. Remi plays one
+ * clip per sentence, so Azure's usual padding of silence before and after each would add up to gaps.
+ */
 export function speechSsml(text: string, locale: string): string {
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${esc(locale)}">`
-    + `<voice name="${cloudVoiceFor(locale)}"><prosody rate="-8%">${esc(text)}</prosody></voice></speak>`;
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${esc(locale)}">`
+    + `<voice name="${cloudVoiceFor(locale)}"><mstts:silence type="Leading-exact" value="0ms"/><mstts:silence type="Tailing-exact" value="80ms"/>`
+    + `${esc(text)}</voice></speak>`;
 }

@@ -31,11 +31,12 @@ describe('isSupportedLanguage', () => {
 });
 
 describe('speechSsml', () => {
-  it('speaks the text in the chosen voice, a little slower, safely escaped', () => {
+  it('speaks the text in the chosen voice at its natural pace, without padded silence, safely escaped', () => {
     const ssml = speechSsml('Tea & "biscuits" <now>', 'en-IN');
     expect(ssml).toContain('<voice name="en-IN-NeerjaNeural">');
     expect(ssml).toContain('xml:lang="en-IN"');
-    expect(ssml).toContain('rate="-8%"');
+    expect(ssml).not.toContain('rate=');
+    expect(ssml).toContain('<mstts:silence type="Leading-exact" value="0ms"/>');
     expect(ssml).toContain('Tea &amp; &quot;biscuits&quot; &lt;now&gt;');
     expect(ssml).not.toContain('<now>');
   });

@@ -15,18 +15,26 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { text?: unknown; language?: unknown } | null;
   const text = typeof body?.text === 'string' ? body.text.trim().slice(0, MAX_CHARS) : '';
   if (!text) return Response.json({ error: 'empty' }, { status: 400 });
-  if (!(await supabaseDeps().takeRateToken(householdId, 'voice', VOICE_PER_MIN, 60))) return new Response(null, { status: 429 });
 
-  const { data: h } = await supabaseAdmin().from('households').select('language').eq('id', householdId).single();
   // the language picked on the tablet, else the family's profile language
-  const household = typeof body?.language === 'string' && isSupportedLanguage(body.language) ? body.language : h?.language ?? 'en-US';
+  const household = typeof body?.language === 'string' && isSupportedLanguage(body.language)
+    ? body.language
+    : (await supabaseAdmin().from('households').select('language').eq('id', householdId).single()).data?.language ?? 'en-US';
   // Remi answers Hindi in Hindi even in an English household; speak it with the Hindi voice.
   const locale = /[ऀ-ॿ]/.test(text) && !/^(hi|mr)/i.test(household) ? 'hi-IN' : household;
+  // Remi is mid-sentence while this runs: check the limit and make the audio at the same time.
+  const audio = synthesize(text, locale);
+  audio.catch(() => {}); // handled below; never an unhandled rejection when the limit says no
+  if (!(await supabaseDeps().takeRateToken(householdId, 'voice', VOICE_PER_MIN, 60))) return new Response(null, { status: 429 });
   try {
-    const audio = await synthesize(text, locale);
-    return new Response(audio, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store' } });
+    return new Response(await audio, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store' } });
   } catch (e) {
     console.error('voice failed', e);
     return new Response(null, { status: 502 }); // the tablet falls back to its own voice
   }
+}
+
+/** Wakes the function before Remi needs it (called as she starts speaking), so the first sentence isn't slow. */
+export function GET() {
+  return new Response(null, { status: 204 });
 }

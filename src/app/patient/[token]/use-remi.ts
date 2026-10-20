@@ -77,7 +77,10 @@ export function useRemi(o: {
   const player = useRef<HTMLAudioElement | null>(null);
   const fetchVoice = useCallback(async (text: string): Promise<Blob | null> => {
     try {
-      const res = await latest.current.api('voice', { method: 'POST', body: JSON.stringify({ text, language: latest.current.language }) });
+      // never wait forever: a stuck clip would keep the microphone paused
+      const res = await latest.current.api('voice', {
+        method: 'POST', body: JSON.stringify({ text, language: latest.current.language }), signal: AbortSignal.timeout(8000),
+      });
       return res.status === 200 ? await res.blob() : null;
     } catch {
       return null;
@@ -244,18 +247,23 @@ export function useRemi(o: {
       settleMs: SETTLE_MS,
       onText: (text) => { handleRef.current(text); },
       onInterim: (text) => {
-        // she has started speaking: wake the reply server now, so it's warm when she finishes
+        // she has started speaking: wake the reply and voice servers now, so they're warm when she finishes
         if (Date.now() - lastWarm.current > 20_000) {
           lastWarm.current = Date.now();
           latest.current.api('talk', { method: 'GET' }).catch(() => {});
+          if (latest.current.cloudVoice) latest.current.api('voice', { method: 'GET' }).catch(() => {});
         }
         setLive(text);
         beat('hear');
         setStatus((s) => (s === 'listening' ? 'hearing' : s));
       },
-      onState: (s: ListenerState) => { if (s === 'blocked') setStatus('blocked'); },
+      onState: (s: ListenerState) => {
+        micBlocked.current = s === 'blocked';
+        if (s === 'blocked') setStatus('blocked');
+      },
     });
   }, []);
+  const micBlocked = useRef(false);
 
   /** Needs a tap: browsers allow the microphone and sound only after one. */
   const start = useCallback(async () => {
@@ -302,12 +310,19 @@ export function useRemi(o: {
   const listenNow = useCallback(() => {
     if (!listener.current) return;
     if (speaking.current) interrupt();
+    if (micBlocked.current) {
+      // the microphone gave up: this tap lets the browser ask for it again
+      micBlocked.current = false;
+      listener.current.stop();
+      listener.current = makeListener();
+      listener.current?.start();
+    }
     armed.current = true;
     lastSpokeAt.current = Date.now();
     setReply('');
     setHeard('');
-    setStatus((s) => (s === 'blocked' ? s : 'hearing'));
-  }, [interrupt]);
+    setStatus('hearing');
+  }, [interrupt, makeListener]);
 
   /** A routine item became due: say it, and listen for "done". */
   const announce = useCallback((item: { id: string; text: string }) => {

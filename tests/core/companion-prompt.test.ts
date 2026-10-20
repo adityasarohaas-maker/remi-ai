@@ -56,11 +56,19 @@ describe('buildCompanionPrompt', () => {
     expect(p).toContain('Do not repeat her own facts back to her');
   });
 
-  it('keeps replies short and lively, with a playful little personality', () => {
+  it('keeps everyday replies short and lively, with a playful little personality', () => {
     const p = buildCompanionPrompt(base);
-    expect(p).toContain('Keep every reply under 25 words');
+    expect(p).toContain('Keep everyday replies under 25 words');
     expect(p).toContain('playful and curious');
     expect(p).toContain('Never lecture or explain at length');
+  });
+
+  it('tells a real story when asked, and offers stories, riddles and little chats on its own', () => {
+    const p = buildCompanionPrompt(base);
+    const check = p.slice(p.indexOf('Before you answer, check:'));
+    expect(p).toContain('tell a gentle, cheerful made-up story of about 80 to 150 words');
+    expect(p).toContain('tell stories, short poems, riddles and jokes');
+    expect(check).toContain('unless she asked for a story');
   });
 
   it('injects the family script when a sensitive topic matched', () => {

@@ -7,6 +7,8 @@ export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: stri
 export const MODELS = {
   chat: () => process.env.NEBIUS_CHAT_MODEL ?? 'nvidia/Nemotron-3_5-Lightning',
   report: () => process.env.NEBIUS_REPORT_MODEL ?? 'nvidia/nemotron-3-super-120b-a12b',
+  /** Tried when the chat model fails before saying anything (a provider can retire a model overnight). */
+  backup: () => process.env.NEBIUS_BACKUP_MODEL || null,
 };
 
 let client: OpenAI | null = null;

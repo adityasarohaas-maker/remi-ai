@@ -91,6 +91,41 @@ describe('createListener', () => {
     expect(rec.running).toBe(false);
     expect(states.at(-1)).toBe('blocked');
   });
+
+  it('keeps listening after a passing microphone error once it has heard her (phones do this after playing sound)', async () => {
+    FakeRec.all = [];
+    const states: string[] = [];
+    const heard: string[] = [];
+    const l = createListener(FakeRec, { lang: 'en-IN', onText: (t) => heard.push(t), onState: (s) => states.push(s), restartDelayMs: 0, retryDelayMs: 0 });
+    l.start();
+    const rec = FakeRec.all[0];
+    rec.say('hello Remi');
+    for (const error of ['audio-capture', 'not-allowed']) {
+      rec.onerror?.({ error });
+      rec.running = false; rec.onend?.();
+      await wait(5);
+      expect(rec.running).toBe(true);
+    }
+    expect(states).not.toContain('blocked');
+    rec.say('still here');
+    expect(heard).toEqual(['hello Remi', 'still here']);
+  });
+
+  it('gives up if the microphone keeps failing even after it once worked', async () => {
+    FakeRec.all = [];
+    const states: string[] = [];
+    const l = createListener(FakeRec, { lang: 'en-IN', onText: () => {}, onState: (s) => states.push(s), restartDelayMs: 0, retryDelayMs: 0 });
+    l.start();
+    const rec = FakeRec.all[0];
+    rec.say('hello Remi');
+    for (let i = 0; i < 6; i++) {
+      rec.onerror?.({ error: 'audio-capture' });
+      rec.running = false; rec.onend?.();
+      await wait(5);
+    }
+    expect(states.at(-1)).toBe('blocked');
+    expect(rec.running).toBe(false);
+  });
 });
 
 import { speakAsync } from '@/lib/speech';

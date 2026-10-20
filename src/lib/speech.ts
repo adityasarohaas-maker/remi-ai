@@ -113,6 +113,8 @@ export function createListener(
     onInterim?: (text: string) => void;
     /** Treat speech as finished once the live words stop changing for this long (0 = wait for the browser). */
     settleMs?: number;
+    /** First wait before retrying after a microphone error; doubles each time. */
+    retryDelayMs?: number;
   },
 ) {
   const rec = new Ctor();
@@ -121,6 +123,11 @@ export function createListener(
   rec.interimResults = true;
   rec.maxAlternatives = 1;
   let wanted = false, paused = false, fatal = false, active = false, delay = o.restartDelayMs ?? 300;
+  // Once the microphone has heard her it is allowed: a later "not-allowed" or "audio-capture" is a
+  // phone briefly holding the mic (after playing Remi's voice, a call, another app), so try again.
+  // Only a microphone that never worked, or that keeps failing, counts as blocked.
+  let worked = false, strikes = 0;
+  const MAX_STRIKES = 5;
 
   // Browsers wait a second or more of silence before calling a phrase final. Live words that stop
   // changing for settleMs are taken as finished, and the browser's late final for them is skipped.
@@ -133,6 +140,8 @@ export function createListener(
       const r = e.results[i];
       const text = r?.[0]?.transcript?.trim();
       if (!r || !text) continue;
+      worked = true;
+      strikes = 0;
       if (r.isFinal !== false) {
         clearSettle();
         if (!early.delete(i)) o.onText(text);
@@ -146,8 +155,11 @@ export function createListener(
     }
   };
   rec.onerror = (e) => {
-    if (FATAL.includes(e.error)) { fatal = true; o.onState('blocked'); }
-    else if (e.error === 'network') delay = Math.min(delay * 2 + 500, 10_000);
+    if (FATAL.includes(e.error)) {
+      const passing = worked && e.error !== 'language-not-supported' && ++strikes < MAX_STRIKES;
+      if (passing) delay = (o.retryDelayMs ?? 1000) * 2 ** (strikes - 1);
+      else { fatal = true; o.onState('blocked'); }
+    } else if (e.error === 'network') delay = Math.min(delay * 2 + 500, 10_000);
   };
   rec.onend = () => {
     active = false;

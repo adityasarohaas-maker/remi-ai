@@ -6,6 +6,18 @@ import { localParts, dayRangeUtc, safeTimeZone } from '@/core/time';
 import type { CoreDeps } from '@/core/talk';
 import type { HouseholdContext, RoutineItem, Approach } from '@/core/types';
 
+async function withBackup(run: (model: string) => Promise<string>, mayRetry: () => boolean): Promise<string> {
+  const model = MODELS.chat();
+  try {
+    return await run(model);
+  } catch (e) {
+    const backup = MODELS.backup();
+    if (!backup || backup === model || !mayRetry()) throw e;
+    console.error(`chat model ${model} failed, trying ${backup}`, e);
+    return run(backup);
+  }
+}
+
 export function supabaseDeps(): CoreDeps {
   const db = supabaseAdmin();
   return {
@@ -60,8 +72,18 @@ export function supabaseDeps(): CoreDeps {
     },
 
     // Live replies: one attempt, short budget — the patient gets the calm fallback instead of a long wait.
-    chat: (messages, opts) => chatText(messages, { model: MODELS.chat(), timeoutMs: 15_000, maxRetries: 0, ...opts }),
-    chatStream: (messages, opts, onDelta) => chatStream(messages, { model: MODELS.chat(), timeoutMs: 15_000, maxRetries: 0, ...opts }, onDelta),
+    // If the model fails before saying a word, the backup model gets one try.
+    chat: (messages, opts) => withBackup(
+      (model) => chatText(messages, { model, timeoutMs: 15_000, maxRetries: 0, ...opts }),
+      () => true,
+    ),
+    chatStream: (messages, opts, onDelta) => {
+      let said = false;
+      return withBackup(
+        (model) => chatStream(messages, { model, timeoutMs: 15_000, maxRetries: 0, ...opts }, (d) => { said = true; onDelta(d); }),
+        () => !said,
+      );
+    },
 
     async logEvent(householdId, type, payload) {
       const { error } = await db.from('events').insert({ household_id: householdId, type, payload });

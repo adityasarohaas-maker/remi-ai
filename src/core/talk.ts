@@ -112,7 +112,8 @@ export async function handleTalk(deps: CoreDeps, input: {
   let fallback = false;
   let toldFamily: string | null = null;
   try {
-    const opts = { maxTokens: 160, temperature: 0.5 };
+    // room for a story when she asks for one; the prompt keeps everyday replies short
+    const opts = { maxTokens: 400, temperature: 0.6 };
     const raw = input.onDelta && deps.chatStream
       ? await deps.chatStream(messages, opts, input.onDelta)
       : await deps.chat(messages, opts);
