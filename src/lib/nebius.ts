@@ -49,23 +49,18 @@ export async function chatStream(
   messages: ChatMessage[],
   opts: {
     model: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxRetries?: number;
-    /** Give up if no words have come by then: some models stall now and then, and a backup is faster. */
-    firstWordsMs?: number;
+    /** Stops the reply early (the caller gave up on it). */
+    signal?: AbortSignal;
   },
   onDelta: (text: string) => void,
 ): Promise<string> {
   const extra = process.env.NEBIUS_DISABLE_THINKING === '1'
     ? { chat_template_kwargs: { enable_thinking: false } }
     : {};
-  // One budget for the whole reply, not just for the first byte; and a shorter one for the first words.
-  const stalled = new AbortController();
-  const stallTimer = opts.firstWordsMs ? setTimeout(() => stalled.abort(new Error(`no words in ${opts.firstWordsMs} ms`)), opts.firstWordsMs) : undefined;
-  const signal = AbortSignal.any([AbortSignal.timeout(opts.timeoutMs ?? 20_000), stalled.signal]);
-  try {
-    return await streamText();
-  } finally {
-    clearTimeout(stallTimer);
-  }
+  // One budget for the whole reply, not just for the first byte.
+  const timeout = AbortSignal.timeout(opts.timeoutMs ?? 20_000);
+  const signal = opts.signal ? AbortSignal.any([timeout, opts.signal]) : timeout;
+  return streamText();
 
   async function streamText(): Promise<string> {
     const stream = await getClient().chat.completions.create(
@@ -83,7 +78,6 @@ export async function chatStream(
     for await (const chunk of stream) {
       const piece = chunk.choices[0]?.delta?.content;
       if (piece) {
-        clearTimeout(stallTimer);
         full += piece;
         onDelta(piece);
       }

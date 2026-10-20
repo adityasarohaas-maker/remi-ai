@@ -34,6 +34,7 @@ describe('looksLikeReasoning: a model thinking out loud instead of answering', (
       'I should tell a gentle story',
       'Avni is asking for a story. I will',
       'She asked for a story, so',
+      '<think>Avni wants a story about',
     ]) expect(looksLikeReasoning(s)).toBe(true);
   });
 

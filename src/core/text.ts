@@ -12,6 +12,7 @@ export function stripReasoning(s: string): string {
 // Some models now and then write their planning as the reply itself, with no <think> tags:
 // "The user wants another story. I should…". Remi must never read that out.
 const REASONING_START = new RegExp([
+  String.raw`^<think`,
   String.raw`^(?:the )?user\b`,
   String.raw`^we (?:need|should|must|have to)\b`,
   String.raw`^ok(?:ay)?,? so\b`,

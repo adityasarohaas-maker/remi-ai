@@ -93,22 +93,30 @@ export function supabaseDeps(): CoreDeps {
         async (model) => {
           // the opening is held back until it can be checked: planning written as the reply never reaches her
           let opening = '';
+          // and it has to come soon: a model that stalls, crawls or thinks at length gives way to the backup
+          const stalled = new AbortController();
+          const timer = setTimeout(() => stalled.abort(new Error(`${model}: no words in ${FIRST_WORDS_MS} ms`)), FIRST_WORDS_MS);
           const check = () => {
             if (looksLikeReasoning(opening)) throw new Error(`${model} wrote its reasoning as the reply`);
+            clearTimeout(timer);
             said = true;
             onDelta(opening);
           };
-          const text = await chatStream(
-            messages,
-            { model, timeoutMs: purpose === 'story' ? 30_000 : 15_000, firstWordsMs: FIRST_WORDS_MS, maxRetries: 0, ...opts },
-            (d) => {
-              if (said) return onDelta(d);
-              opening += d;
-              if (opening.length >= 40 || /[.!?।\n]/.test(opening)) check();
-            },
-          );
-          if (!said && opening) check();
-          return text;
+          try {
+            const text = await chatStream(
+              messages,
+              { model, timeoutMs: purpose === 'story' ? 30_000 : 15_000, signal: stalled.signal, maxRetries: 0, ...opts },
+              (d) => {
+                if (said) return onDelta(d);
+                opening += d;
+                if (opening.trim().length >= 40 || /[.!?।\n]/.test(opening.trim())) check();
+              },
+            );
+            if (!said && opening.trim()) check();
+            return text;
+          } finally {
+            clearTimeout(timer);
+          }
         },
         () => !said,
       );
