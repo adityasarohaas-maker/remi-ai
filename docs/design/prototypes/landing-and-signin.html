@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remi — prototype v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --dusk-top: #070B22; --dusk-mid: #0D1638; --dusk-low: #13213F; --forest: #0A1A1C;
+    --ink: #F5F3EE; --dim: #AEB4C8; --gold: #FFCF7A; --gold-deep: #F2A93B; --mint: #A8F0C6;
+    --line: #ffffff1c; --panel: #ffffff0b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; color: var(--ink); font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { background: var(--dusk-top); }
+  .sky { position: fixed; inset: 0; z-index: 0; background:
+      radial-gradient(34vmax 26vmax at 80% 12%, #FFF3D61c 0%, #FFF3D608 40%, transparent 70%),
+      linear-gradient(180deg, transparent 0%, transparent 57%, #0F2526 63%, #0B1C1D 78%, #081415 100%),
+      radial-gradient(130% 50% at 50% 100%, #1E4A4466 0%, transparent 70%),
+      linear-gradient(180deg, var(--dusk-top) 0%, var(--dusk-mid) 45%, var(--dusk-low) 70%, var(--forest) 100%); }
+  .moon { position: fixed; z-index: 0; right: 15%; top: 8%; width: 48px; height: 48px; border-radius: 50%;
+      background: radial-gradient(circle at 38% 36%, #FFF9EC, #F1E2C2 60%, #D6C095); box-shadow: 0 0 70px 20px #FFF0C82a; }
+  .woods { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .woods svg { position: absolute; left: -4%; width: 108%; height: 100%; }
+  canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 1; }
+  .mist { position: fixed; left: 0; right: 0; bottom: 0; height: 14vh; z-index: 2; pointer-events: none;
+      background: linear-gradient(180deg, transparent, #07121499); }
+  /* a floating glass dock, centred, instead of a full-width bar */
+  nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: clamp(14px, 2.4vw, 34px);
+      padding: 8px 8px 8px 18px; border-radius: 999px; background: #0B1230a6; border: 1px solid #ffffff1f;
+      backdrop-filter: blur(14px) saturate(140%); box-shadow: 0 18px 50px -20px #000c, inset 0 1px 0 #ffffff14; white-space: nowrap; }
+  nav .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; letter-spacing: -.02em; }
+  nav .links { display: flex; gap: 24px; font-size: 14.5px; color: #DCDEEA; }
+  nav .right { display: flex; align-items: center; gap: 16px; font-size: 14.5px; }
+  .btn { border: 0; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 15px; border-radius: 999px; padding: 11px 20px;
+      background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: #251604; box-shadow: 0 8px 28px -8px #F2A93B88, inset 0 1px 0 #ffffff88; }
+  /* one grid for the whole page: the same edges and 12 columns in every section */
+  :root { --max: 1240px; --edge: max(24px, calc((100vw - var(--max)) / 2)); --gap: clamp(16px, 2vw, 28px); --section: clamp(96px, 16vh, 180px); }
+  main { position: relative; z-index: 3; }
+  .wrap { width: 100%; max-width: calc(var(--max) + 2 * 24px); margin: 0 auto; padding: 0 24px; }
+  .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); }
+  .num { display: block; margin-bottom: 14px; font-size: 13px; font-weight: 500; color: var(--gold); font-variant-numeric: tabular-nums; }
+  h2.title { margin: 0; font-weight: 500; font-size: clamp(30px, 3.2vw, 48px); line-height: 1.04; letter-spacing: -.04em; }
+  .muted { color: var(--dim); }
+
+  /* ---- hero: the two words settle into a title plate under Kodi's feet ---- */
+  .hero { height: 230vh; }
+  .hero-sticky { position: sticky; top: 0; height: 100vh; }
+  .split { position: absolute; top: 76%; transform: translateY(-50%); opacity: 0; will-change: transform, opacity;
+      font-weight: 400; font-size: clamp(44px, 6vw, 88px); letter-spacing: -.05em; line-height: 1; }
+  .split.left { left: var(--edge); }
+  .split.right { right: var(--edge); font-weight: 300; color: #FFE1A8; }
+  .plate { position: absolute; left: var(--edge); right: var(--edge); top: calc(76% + clamp(36px, 4.4vw, 62px)); opacity: 0;
+      display: flex; justify-content: space-between; gap: 24px; padding-top: 14px; border-top: 1px solid #ffffff2e; font-size: 14.5px; color: #C9CEDD; }
+  .plate .hint { display: flex; align-items: center; gap: 10px; color: var(--dim); }
+  .plate .hint i { width: 26px; height: 1px; background: linear-gradient(90deg, var(--gold), transparent); }
+  .headline { position: absolute; left: var(--edge); right: var(--edge); top: 50%; transform: translateY(-50%); opacity: 0; }
+  .headline .grid { align-items: center; }
+  .headline .main { grid-column: 1 / span 7; }
+  .headline h1 { margin: 0; font-weight: 500; font-size: clamp(40px, 5.2vw, 78px); line-height: 1.0; letter-spacing: -.05em; text-shadow: 0 2px 30px #0008; }
+  .headline .main p { margin: 22px 0 0; max-width: 30em; color: #CDD1E0; font-size: clamp(16px, 1.3vw, 19px); line-height: 1.6; text-shadow: 0 1px 16px #000a; }
+  .facts { grid-column: 9 / span 4; list-style: none; margin: 0; padding: 0; }
+  .facts li { padding: 16px 0; border-top: 1px solid #ffffff24; }
+  .facts li:last-child { border-bottom: 1px solid #ffffff24; }
+  .facts b { display: block; font-weight: 500; font-size: clamp(22px, 2vw, 30px); letter-spacing: -.03em; color: var(--ink); }
+  .facts span { font-size: 14px; color: var(--dim); }
+
+  /* ---- 01 the film: words in columns 1–4, the frame in 5–12 ---- */
+  .film { padding: var(--section) 0; }
+  .film .grid { align-items: center; }
+  .film-copy { grid-column: 1 / span 4; }
+  .film-copy p { margin: 16px 0 0; color: var(--dim); font-size: 16px; line-height: 1.65; }
+  .film-copy blockquote { margin: 26px 0 0; padding-left: 16px; border-left: 2px solid var(--gold); font-size: 18px; line-height: 1.5; color: #EDE6D6; }
+  .film-copy cite { display: block; margin-top: 8px; font-style: normal; font-size: 13px; color: var(--dim); }
+  .frame { grid-column: 5 / span 8; aspect-ratio: 16/10; border-radius: 28px; overflow: hidden; position: relative; border: 1px solid #ffffff22;
+      background: radial-gradient(60% 70% at 72% 40%, #f0a35a55, transparent 60%), radial-gradient(40% 50% at 30% 70%, #3b2a2066, transparent 70%), linear-gradient(180deg, #2a1e19, #120c0a);
+      box-shadow: 0 50px 140px -40px #000c, 0 0 0 8px #ffffff08; }
+  .frame .lamp { position: absolute; left: 14%; top: 18%; width: 90px; height: 50px; border-radius: 90px 90px 10px 10px; background: #d9572f; box-shadow: 0 30px 80px 20px #f0a35a55; }
+  .frame .tablet { position: absolute; right: 26%; bottom: 22%; width: 150px; height: 104px; border-radius: 12px; background: linear-gradient(160deg, #EEE9FF, #CFC3FF); box-shadow: 0 0 60px 10px #b9a8ff44; transform: perspective(600px) rotateY(-18deg) rotateX(8deg); }
+  .frame .chair { position: absolute; right: 38%; bottom: 0; width: 230px; height: 230px; border-radius: 120px 120px 20px 20px; background: linear-gradient(180deg, #6b3e22, #3a2214); }
+  .frame .play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(180deg, var(--gold), var(--gold-deep)); display: grid; place-items: center; box-shadow: 0 10px 40px -6px #F2A93B99; }
+  .frame .play:after { content: ''; border-left: 18px solid #251604; border-top: 11px solid transparent; border-bottom: 11px solid transparent; margin-left: 5px; }
+  .frame .time { position: absolute; right: 16px; bottom: 14px; font-size: 13px; color: #fffc; background: #0007; padding: 4px 10px; border-radius: 999px; }
+
+  /* ---- 02 how it works: the statement in 1–8, detail in 9–12, then three steps across ---- */
+  .how { padding: 0 0 var(--section); }
+  .how .lead { grid-column: 1 / span 8; margin: 0; font-weight: 400; font-size: clamp(28px, 3.2vw, 48px); line-height: 1.12; letter-spacing: -.04em; color: #EEF0F6; }
+  .how .side { grid-column: 9 / span 4; align-self: end; margin: 0; color: var(--dim); font-size: 16px; line-height: 1.65; }
+  .steps { grid-column: 1 / -1; margin: clamp(48px, 7vh, 80px) 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); }
+  .steps li { padding: 22px 22px 26px; border-radius: 22px; background: #ffffff0a; border: 1px solid #ffffff1c; backdrop-filter: blur(10px); }
+  .steps .n { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #FFCF7A66; color: var(--gold); font-size: 14px; font-weight: 500; margin-bottom: 18px; }
+  .steps h3 { margin: 0 0 8px; font-weight: 500; font-size: 20px; letter-spacing: -.02em; }
+  .steps p { margin: 0; color: var(--dim); font-size: 15px; line-height: 1.6; }
+
+  /* ---- 03 the heart: words in 1–5 (centred in the screen's height), the fireflies' heart fills 7–12 ---- */
+  .heart { height: 170vh; }
+  .heart-sticky { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+  .heart-copy { grid-column: 1 / span 5; }
+  .heart-copy p { margin: 16px 0 0; color: #DCDEEA; font-size: 17px; line-height: 1.6; }
+  .chips2 { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+  .chips2 span { padding: 8px 14px; border-radius: 999px; font-size: 14px; background: #ffffff0f; border: 1px solid #ffffff22; color: #E6E8F0; }
+
+  /* ---- 04 two places: heading row on the grid, then the tilted devices ---- */
+  .screens { padding: var(--section) 0; }
+  .screens-head { align-items: end; margin-bottom: clamp(32px, 5vh, 56px); }
+  .screens-head > div { grid-column: 1 / span 7; }
+  .screens-head > p { grid-column: 9 / span 4; margin: 0; color: var(--dim); font-size: 16px; line-height: 1.6; }
+  .pair { position: relative; height: 600px; perspective: 1600px; }
+  .pair h3 { font-weight: 500; font-size: 14px; margin: 0 0 10px; color: var(--dim); }
+  .pair .tab-wrap { position: absolute; left: 0; top: 60px; width: 66%; transform: rotateY(8deg) rotateX(3deg); transform-origin: left center; }
+  .pair .phone-wrap { position: absolute; right: 0; top: 0; width: 320px; transform: rotateY(-12deg) rotateX(2deg); z-index: 2; }
+  .device { border-radius: 30px; padding: 14px; background: linear-gradient(180deg, #23304a, #121a2c); border: 1px solid #ffffff22; box-shadow: 0 40px 80px -30px #000; }
+  .tab-screen { height: 400px; border-radius: 18px; background: radial-gradient(80% 60% at 50% 45%, #fff 0%, #EEE9FF 60%, #E4DCFF 100%); color: #231B4D; padding: 20px; position: relative; overflow: hidden; }
+  .tab-screen .g { font-size: 13px; opacity: .7; } .tab-screen .d { font-size: 30px; font-weight: 600; letter-spacing: -.03em; }
+  .tab-screen .orb { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #d9cfff 55%, #b7a6ff); box-shadow: 0 20px 50px -10px #7b62e866; }
+  .tab-screen .acts { position: absolute; left: 20px; right: 20px; bottom: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tab-screen .acts div { background: #ffffffcc; border-radius: 14px; padding: 12px 8px; font-size: 12px; text-align: center; font-weight: 600; }
+  .phone { max-width: 330px; border-radius: 40px; padding: 12px; background: linear-gradient(180deg, #23304a, #121a2c); border: 1px solid #ffffff22; box-shadow: 0 40px 80px -30px #000; }
+  .portal { height: 520px; border-radius: 30px; background: linear-gradient(180deg, #121a33, #0B1128); padding: 22px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .portal .t { font-size: 13px; color: var(--dim); }
+  .portal .big { font-size: 25px; font-weight: 500; line-height: 1.15; letter-spacing: -.03em; }
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .chips div { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px; font-size: 11.5px; color: var(--dim); }
+  .chips b { display: block; color: var(--ink); font-size: 18px; font-weight: 500; margin-top: 4px; }
+  .feed { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; font-size: 13px; line-height: 1.75; color: #DEE0EA; }
+  .feed i { color: var(--gold); font-style: normal; margin-right: 8px; font-weight: 500; }
+
+  /* ---- 05 the ending: a glass panel, then a real footer ---- */
+  .cta { padding: 0 0 clamp(48px, 8vh, 96px); }
+  .cta-card { display: flex; justify-content: space-between; align-items: center; gap: 28px; flex-wrap: wrap;
+      padding: clamp(28px, 4vw, 56px); border-radius: 32px; background: linear-gradient(135deg, #ffffff12, #ffffff05); border: 1px solid #ffffff22;
+      backdrop-filter: blur(16px); box-shadow: 0 40px 100px -40px #000c; }
+  .cta-card h2 { margin: 0 0 8px; }
+  .cta-card p { margin: 0; color: var(--dim); }
+  footer { position: relative; z-index: 3; padding: 0 0 56px; }
+  footer .grid { row-gap: 28px; padding-top: 32px; border-top: 1px solid #ffffff1f; font-size: 14px; }
+  footer .about { grid-column: 1 / span 4; color: var(--dim); line-height: 1.6; }
+  footer .about b { display: block; color: var(--ink); font-size: 17px; margin-bottom: 6px; font-weight: 600; }
+  footer .col { grid-column: span 2; display: flex; flex-direction: column; gap: 10px; color: #CFD3E2; }
+  footer .col strong { color: var(--ink); font-weight: 500; margin-bottom: 4px; }
+  footer .col:first-of-type { grid-column: 7 / span 2; }
+  footer .small { grid-column: 1 / -1; color: #7F86A0; font-size: 13px; }
+
+  .note { position: fixed; left: 16px; bottom: 14px; z-index: 20; font-size: 12px; color: #9aa0b6; background: #0008; padding: 6px 10px; border-radius: 8px; }
+  @media (max-width: 900px) {
+    nav .links { display: none; }
+    .headline .main, .facts, .film-copy, .frame, .how .lead, .how .side, .heart-copy, .screens-head > div, .screens-head > p, footer .about { grid-column: 1 / -1; }
+    .facts { margin-top: 28px; } .frame { margin-top: 28px; } .how .side { margin-top: 20px; }
+    .steps { grid-template-columns: 1fr; }
+    .pair { height: auto; display: grid; gap: 24px; }
+    .pair .tab-wrap, .pair .phone-wrap { position: static; width: 100%; transform: none; }
+    .phone { margin: 0 auto; }
+    footer .col, footer .col:first-of-type { grid-column: span 6; }
+    .plate { font-size: 13px; } .plate .who { max-width: 60%; }
+  }
+  body.signin-mode nav, body.signin-mode main, body.signin-mode footer, body.signin-mode .note { display: none; }
+  .si-shade, .si-card, .si-bubble { display: none; }
+  body.signin-mode .si-shade { display: block; position: fixed; inset: 0; z-index: 4; pointer-events: none; background: linear-gradient(90deg, #070B22e6 0%, #070B2299 34%, transparent 58%); }
+  body.signin-mode .si-card { display: block; position: fixed; z-index: 6; left: var(--edge); top: 50%; transform: translateY(-50%); width: min(430px, calc(100vw - 48px)); padding: 36px; border-radius: 28px;
+      background: #0B1230b8; border: 1px solid #ffffff22; backdrop-filter: blur(16px); box-shadow: 0 30px 80px -30px #000; }
+  .si-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; letter-spacing: -.02em; }
+  .si-card h2 { margin: 26px 0 6px; font-weight: 500; font-size: 34px; letter-spacing: -.04em; }
+  .si-sub { margin: 0 0 24px; color: var(--dim); }
+  .si-field { display: block; margin-bottom: 14px; }
+  .si-field span { display: block; font-size: 13.5px; color: #C9CEDD; margin-bottom: 6px; }
+  .si-field input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #ffffff2a; background: #ffffff0d; color: #fff; font: inherit; font-size: 16px; outline: none; }
+  .si-field input:focus { border-color: #FFCF7A99; background: #ffffff14; }
+  .si-btn { width: 100%; margin-top: 8px; font-size: 16px; padding: 14px; }
+  .si-alt { margin: 20px 0 0; font-size: 14.5px; color: var(--dim); } .si-alt a { color: #FFE1A8; }
+  .si-try { margin: 10px 0 0; color: #8F97B0; font-size: 13px; }
+  body.signin-mode .si-bubble { display: block; position: fixed; z-index: 6; right: 20%; top: 18%; padding: 10px 18px; border-radius: 18px 18px 4px 18px; background: #ffffffeb; color: #16203B;
+      font-family: "Caveat", cursive; font-size: 26px; box-shadow: 0 10px 30px -10px #000; opacity: 0; transform: translateY(6px); transition: opacity .35s, transform .35s; }
+  body.signin-mode .si-bubble.on { opacity: 1; transform: none; }
+  @media (max-width: 860px) { body.signin-mode .si-card { top: auto; bottom: 16px; transform: none; } body.signin-mode .si-shade { background: linear-gradient(0deg, #070B22ee 0%, #070B2299 50%, transparent 75%); } }
+</style>
+</head>
+<body>
+<div class="sky"></div><div class="moon"></div>
+<div class="woods" id="woods"></div>
+<canvas id="world"></canvas>
+<div class="mist"></div>
+<nav>
+  <div class="brand"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c0-5 0-8 2-11" stroke="#A8F0C6" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M14 10c3-4 7-3 8-2-2 3-5 4-8 2Z" fill="#A8F0C6"/><path d="M12.6 12C9.5 8.5 5 9.3 4 10.4c2.3 2.8 6 3.4 8.6 1.6Z" fill="#7FD9A4"/></svg>Remi</div>
+  <div class="links"><span>How it works</span><span>For families</span><span>Care homes</span><span>Safety</span></div>
+  <div class="right"><span>Sign in</span><button class="btn">Get started</button></div>
+</nav>
+<main>
+  <div class="hero"><div class="hero-sticky">
+    <div class="split left" id="splitL">Remi</div>
+    <div class="split right" id="splitR">companion</div>
+    <div class="plate" id="plate">
+      <span class="who">A friend for people living with dementia, and the families who love them.</span>
+      <span class="hint" id="hint"><i></i>Scroll to meet Remi</span>
+    </div>
+    <div class="headline" id="headline"><div class="grid">
+      <div class="main">
+        <h1>A gentle friend for the one you love</h1>
+        <p>It talks with them, remembers with them, reminds them gently — and lets the family know how their day really went.</p>
+      </div>
+      <ul class="facts">
+        <li><b>Under a second</b><span>to answer, like a real conversation</span></li>
+        <li><b>37 languages</b><span>in a soft, natural voice</span></li>
+        <li><b>Every evening</b><span>a short, honest note for the family</span></li>
+      </ul>
+    </div></div>
+  </div></div>
+
+  <section class="film"><div class="wrap grid">
+    <div class="film-copy">
+      <span class="num">01</span>
+      <h2 class="title">An evening with Avni</h2>
+      <p>Avni is 78 and lives with early dementia. Most evenings she tells Remi about her roses, and Remi always wants to hear more.</p>
+      <blockquote>“It never minds when I ask the same thing twice.”<cite>Avni, in the film (scene to be shot)</cite></blockquote>
+    </div>
+    <div class="frame"><div class="lamp"></div><div class="chair"></div><div class="tablet"></div><div class="play"></div><span class="time">2:14</span></div>
+  </div></section>
+
+  <section class="how"><div class="wrap grid">
+    <span class="num" style="grid-column: 1 / -1">02</span>
+    <p class="lead">Remi lives on a tablet in their home. It listens all day, answers like an old friend, and never tires of the same question.</p>
+    <p class="side">No new devices, no apps to learn. If they can talk, they can use Remi.</p>
+    <ol class="steps">
+      <li><span class="n">1</span><h3>The family sets it up</h3><p>Who's who, the daily routine, and the topics that need a gentle touch. About ten minutes.</p></li>
+      <li><span class="n">2</span><h3>Remi keeps them company</h3><p>Chats, stories, reminders for medicine and meals, and help putting names to faces.</p></li>
+      <li><span class="n">3</span><h3>The family hears how it went</h3><p>A short note each evening, and an alert straight away if something seems wrong.</p></li>
+    </ol>
+  </div></section>
+
+  <div class="heart"><div class="heart-sticky"><div class="wrap grid">
+    <div class="heart-copy">
+      <span class="num">03</span>
+      <h2 class="title">Talks like a friend, not a machine</h2>
+      <p>Ask it anything, interrupt it, ask for a story. It answers in under a second, in their own language, in a soft human voice — and knows when to stay quiet.</p>
+      <div class="chips2"><span>Interrupt any time</span><span>Tells stories</span><span>37 languages</span><span>Knows when to stay quiet</span></div>
+    </div>
+  </div></div></div>
+
+  <section class="screens"><div class="wrap">
+    <div class="grid screens-head">
+      <div><span class="num">04</span><h2 class="title">One friend, two places</h2></div>
+      <p>What she sees on her tablet, and what her family sees on their phone — the same day, from both sides.</p>
+    </div>
+    <div class="pair">
+      <div class="tab-wrap"><h3>On her tablet</h3><div class="device"><div class="tab-screen">
+        <div class="g">Good morning, Avni</div><div class="d">Tuesday</div>
+        <div class="orb"></div>
+        <div class="acts"><div>Who is this?</div><div>My day</div><div>Type</div></div>
+      </div></div></div>
+      <div class="phone-wrap"><h3>On her family's phone</h3><div class="phone"><div class="portal">
+        <div><div class="t">Avni · today</div><div class="big">A calm, happy morning</div></div>
+        <div class="chips"><div>Chats<b>6</b></div><div>Mood<b>Happy</b></div><div>Routine<b>3/4</b></div></div>
+        <div class="feed"><div><i>9:02</i>Took her morning tablet</div><div><i>9:40</i>Talked about the roses</div><div><i>10:15</i>Asked when Rohan is coming</div><div><i>11:30</i>Heard a story about a clever crow</div></div>
+      </div></div></div>
+    </div>
+  </div></section>
+
+  <section class="cta"><div class="wrap">
+    <div class="cta-card">
+      <div><span class="num">05</span><h2 class="title">Bring Remi home</h2><p>Set up takes about ten minutes. No new devices needed.</p></div>
+      <button class="btn" style="font-size:16px;padding:15px 28px">Set up for your family</button>
+    </div>
+  </div></section>
+</main>
+<footer><div class="wrap grid">
+  <div class="about"><b>Remi</b>A gentle companion for people living with dementia, and peace of mind for the people who love them.</div>
+  <div class="col"><strong>Product</strong><span>How it works</span><span>For families</span><span>Care homes</span></div>
+  <div class="col"><strong>Trust</strong><span>Safety</span><span>Privacy</span><span>Research</span></div>
+  <div class="col"><strong>Company</strong><span>About</span><span>Contact</span><span>Press</span></div>
+  <div class="small">Remi is not a medical device and does not give medical advice. © 2026</div>
+</div></footer>
+<div class="note">Prototype v7 · "Remi" is a working name</div>
+<div class="si-shade"></div>
+<div class="si-bubble" id="siBubble">I'm not looking!</div>
+<div class="si-card">
+  <div class="si-brand"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c0-5 0-8 2-11" stroke="#A8F0C6" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M14 10c3-4 7-3 8-2-2 3-5 4-8 2Z" fill="#A8F0C6"/><path d="M12.6 12C9.5 8.5 5 9.3 4 10.4c2.3 2.8 6 3.4 8.6 1.6Z" fill="#7FD9A4"/></svg>Remi</div>
+  <h2>Welcome back</h2>
+  <p class="si-sub">Sign in to see how Avni's day is going.</p>
+  <label class="si-field"><span>Email</span><input id="siEmail" placeholder="you@example.com" autocomplete="off"></label>
+  <label class="si-field"><span>Password</span><input id="siPass" type="password" placeholder="Your password" autocomplete="off"></label>
+  <button class="btn si-btn">Sign in</button>
+  <p class="si-alt">New here? <a href="#">Set up Remi for your family</a></p>
+  <p class="si-try">A mockup: nothing you type is sent anywhere.</p>
+</div>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+const canvas = document.getElementById('world');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setClearColor(0x000000, 0);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 120);
+camera.position.set(0, 0.35, 9);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const GROUND = -1.32;
+
+// ---------------- one shader for every glowing thing ----------------
+// parts: 0 Kodi's skin, 1 leaf, 2 face, 3 left arm, 4 right arm, 5 eyes,
+//        6 trees, 7 grass, 8 falling leaves, 9 fireflies, 10 animals, 11 mushrooms and flowers
+const vertexShader = `
+  attribute vec3 scatter; attribute vec3 heart; attribute vec3 intro; attribute vec3 color; attribute float size; attribute float seed; attribute float part;
+  uniform float uTime, uScatter, uHeart, uIntro, uPx, uHover, uKodi, uDrift, uFade, uArmL, uArmR, uBlink, uSize, uWind, uPeek; uniform vec3 uMouse;
+  varying vec3 vColor; varying float vLight;
+  vec2 rot(vec2 v, float a) { return vec2(cos(a) * v.x - sin(a) * v.y, sin(a) * v.x + cos(a) * v.y); }
+  void main() {
+    vec3 base = position;
+    float life = 1.0; // extra light for the living things of the forest
+    float hgt = max(0.0, base.y + 1.32);
+    if (part > 5.5 && part < 6.5) { // trees sway in the breeze, most at the crown
+      float sway = sin(uTime * 0.9 + base.x * 0.3 + base.z * 0.2) * 0.6 + sin(uTime * 1.9 + base.x * 0.8) * 0.25;
+      base.x += sway * 0.022 * hgt * hgt * uWind;
+      base.z += cos(uTime * 0.7 + base.x * 0.4) * 0.008 * hgt * hgt * uWind;
+    }
+    if (part > 6.5 && part < 7.5) base.x += sin(uTime * 2.4 + base.x * 0.9 + base.z * 0.7) * 0.7 * hgt * uWind; // grass ripples
+    if (part > 7.5 && part < 8.5) { // leaves drift down from the crowns, then fade
+      float c = fract(uTime * (0.03 + fract(seed * 1.31) * 0.035) + fract(seed * 0.77));
+      base.y = mix(base.y, -1.3, c);
+      base.x += sin(uTime * 1.3 + seed) * 0.35 + c * (fract(seed * 2.1) - 0.3) * 2.4 * uWind;
+      base.z += cos(uTime * 1.1 + seed * 1.7) * 0.25;
+      life = smoothstep(0.0, 0.06, c) * smoothstep(1.0, 0.86, c);
+    }
+    if (part > 8.5 && part < 9.5) { // fireflies wander, and blink on and off
+      base += vec3(sin(uTime * 0.23 + seed) * 1.4, sin(uTime * 0.41 + seed * 2.0) * 0.45, cos(uTime * 0.19 + seed) * 1.2);
+      life = 0.1 + 1.9 * pow(max(0.0, sin(uTime * (0.5 + fract(seed * 7.0) * 0.9) + seed * 5.0)), 6.0);
+    }
+    if (part > 10.5 && part < 11.5) life = 0.8 + 0.35 * sin(uTime * 1.2 + base.x * 2.0 + base.z); // mushrooms breathe
+    // Kodi's own little movements: arms swing from the shoulder, eyes blink
+    if (part > 2.5 && part < 4.5) {
+      float sgn = part < 3.5 ? -1.0 : 1.0;
+      vec2 pivot = vec2(0.66 * sgn, -0.3);
+      base.xy = pivot + rot(base.xy - pivot, (part < 3.5 ? uArmL : uArmR) * sgn);
+    }
+    if (part > 4.5 && part < 5.5) base.y = 0.62 + (base.y - 0.62) * uBlink;
+    // shy: the two leaves fold down over the eyes, like hands (while a password is typed)
+    if (part > 0.5 && part < 1.5 && uPeek > 0.001) {
+      float side = base.x >= 0.0 ? 1.0 : -1.0;
+      vec2 pivot = vec2(0.04 * side, 1.62);
+      vec2 d = base.xy - pivot;
+      float reach = clamp(length(d) / 1.25, 0.0, 1.0);
+      base.xy = pivot + rot(d, -side * 1.6 * uPeek) + vec2(-side * 0.08, -0.35) * uPeek; // the blades land over the eyes
+      base.z += uPeek * (0.15 + 0.8 * reach);
+    }
+    float k = clamp((uIntro - fract(seed * 0.37) * 0.45) / 0.55, 0.0, 1.0);
+    float e = 1.0 - pow(1.0 - k, 3.0);
+    float flies = step(0.01, distance(intro, position));
+    vec3 home = mix(intro, base, e) + flies * vec3(0.0, sin(e * 3.14159) * (fract(seed * 1.7) - 0.5) * 1.6, sin(e * 3.14159) * 1.2);
+    float s = smoothstep(0.0, 1.0, clamp(uScatter * 1.15 - fract(seed) * 0.15, 0.0, 1.0)) * uKodi;
+    vec3 p = mix(home, scatter, s);
+    p = mix(p, heart, smoothstep(0.0, 1.0, uHeart) * uKodi);
+    float drift = mix(uDrift, 0.22, s);
+    p += drift * vec3(sin(uTime * 0.5 + seed), cos(uTime * 0.4 + seed * 1.3), sin(uTime * 0.35 + seed * 0.7));
+    vec4 wp = modelMatrix * vec4(p, 1.0);
+    vec3 toMouse = uMouse - wp.xyz;
+    float f = exp(-dot(toMouse, toMouse) / 1.2) * uHover * uKodi;
+    wp.xyz += toMouse * f * (0.25 + 0.25 * fract(seed * 3.1));
+    vec4 mv = viewMatrix * wp;
+    gl_Position = projectionMatrix * mv;
+    vec3 n = normalize(mat3(modelMatrix) * normal + 1e-5);
+    float rim = pow(1.0 - abs(n.z), 2.2);
+    float skin = (part < 0.5 || (part > 2.5 && part < 4.5)) ? 1.0 : 0.0;
+    float shade = mix(1.0, (0.3 + 0.7 * smoothstep(-0.5, 0.6, n.z)) * (0.75 + 0.9 * rim), skin);
+    // trees, grass and animals are lit by the moon from the upper right, and glow at their edges like Kodi
+    float solid = (part > 5.5 && part < 7.5) || (part > 9.5 && part < 10.5) ? 1.0 : 0.0;
+    float moonlit = mix(1.0, (0.4 + 0.85 * smoothstep(-0.2, 0.9, dot(n, normalize(vec3(0.7, 0.6, 0.4))))) * (0.5 + 1.5 * rim), solid);
+    float tw = 0.72 + 0.28 * sin(uTime * (1.2 + fract(seed * 5.3) * 2.2) + seed * 7.0);
+    vLight = mix(1.0, shade, uKodi * (1.0 - s)) * moonlit * life * tw * (1.0 + 1.6 * f) * uFade;
+    // far-off woods would shrink to nothing; they keep some size so the trees still read
+    float dist = -mv.z;
+    gl_PointSize = size * uPx * uSize * mix(7.5 / dist, 7.5 / pow(dist, 0.6) / 3.7, step(5.5, part)) * (1.0 + 0.8 * f) * mix(1.0, 1.0 + 0.5 * rim, uKodi * skin);
+    if (part > 0.5 && part < 1.5) { vLight *= 1.0 + 1.1 * uPeek; gl_PointSize *= 1.0 + 0.45 * uPeek; } // the shy leaves glow
+    vColor = color;
+  }`;
+const fragmentShader = `
+  varying vec3 vColor; varying float vLight;
+  void main() {
+    float d = length(gl_PointCoord - 0.5);
+    float a = smoothstep(0.5, 0.0, d); a *= a;
+    float core = smoothstep(0.16, 0.0, d);
+    gl_FragColor = vec4((vColor + core * 0.5) * vLight, a);
+  }`;
+const shared = {
+  uTime: { value: 0 }, uScatter: { value: 0 }, uHeart: { value: 0 }, uIntro: { value: 0 }, uPx: { value: renderer.getPixelRatio() },
+  uMouse: { value: new THREE.Vector3(99, 99, 0) }, uHover: { value: 0 }, uArmL: { value: 0 }, uArmR: { value: 0 }, uBlink: { value: 1 },
+  uWind: { value: 1 }, uPeek: { value: 0 },
+};
+const makeMaterial = (o) => new THREE.ShaderMaterial({
+  uniforms: { ...shared, uKodi: { value: o.kodi ? 1 : 0 }, uDrift: { value: o.drift }, uFade: { value: o.fade ?? 1 }, uSize: { value: o.size ?? 1 } },
+  vertexShader, fragmentShader, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+function cloud(n) {
+  return { n, i: 0, pos: new Float32Array(n * 3), normal: new Float32Array(n * 3), color: new Float32Array(n * 3), size: new Float32Array(n),
+    seed: new Float32Array(n), part: new Float32Array(n), scatter: null, heart: null, intro: null };
+}
+function add(c, p, n, col, size, part = 6) {
+  if (c.i >= c.n) return;
+  const i = c.i++;
+  c.pos.set(p, i * 3); c.normal.set(n, i * 3); c.color.set(col, i * 3); c.size[i] = size; c.seed[i] = Math.random() * 100; c.part[i] = part;
+}
+function toPoints(c, mat) {
+  const g = new THREE.BufferGeometry(), n = c.i;
+  const sub = (a, k) => a.subarray(0, n * k);
+  g.setAttribute('position', new THREE.BufferAttribute(sub(c.pos, 3), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(sub(c.normal, 3), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(sub(c.color, 3), 3));
+  for (const k of ['scatter', 'heart', 'intro']) g.setAttribute(k, new THREE.BufferAttribute(c[k] ? sub(c[k], 3) : sub(c.pos, 3), 3));
+  g.setAttribute('size', new THREE.BufferAttribute(sub(c.size, 1), 1));
+  g.setAttribute('seed', new THREE.BufferAttribute(sub(c.seed, 1), 1));
+  g.setAttribute('part', new THREE.BufferAttribute(sub(c.part, 1), 1));
+  return new THREE.Points(g, mat);
+}
+function onEllipsoid(c, surface = true) {
+  const [cx, cy, cz, rx, ry, rz] = c, u = rnd(-1, 1), th = rnd(0, Math.PI * 2), s = Math.sqrt(1 - u * u);
+  const k = surface ? 1 - Math.random() * 0.03 : Math.pow(Math.random(), 0.4);
+  const d = [s * Math.cos(th), u, s * Math.sin(th)];
+  const n = [d[0] / rx, d[1] / ry, d[2] / rz], l = Math.hypot(...n);
+  return { p: [cx + rx * d[0] * k, cy + ry * d[1] * k, cz + rz * d[2] * k], n: n.map((v) => v / l) };
+}
+
+// ---------------- Kodi ----------------
+const N = 15000, K = cloud(N);
+K.scatter = new Float32Array(N * 3); K.heart = new Float32Array(N * 3); K.intro = new Float32Array(N * 3);
+const HEAD = [0, 0.62, 0, 1.18, 1.06, 0.95], BODY = [0, -0.72, 0, 0.78, 0.72, 0.66];
+const C = { moon: [0.97, 0.95, 1.0], cream: [1.0, 0.93, 0.8], gold: [1.0, 0.8, 0.45], mint: [0.62, 0.95, 0.75], leaf: [0.5, 0.9, 0.6],
+  leafEdge: [0.78, 1.0, 0.82], vein: [0.9, 1.0, 0.85], cheek: [1.0, 0.55, 0.7], eye: [1.0, 0.92, 0.7], smile: [1.0, 0.75, 0.55] };
+const inEye = (x, y, z) => z > 0.2 && [-0.42, 0.42].some((ex) => ((x - ex) / 0.25) ** 2 + ((y - 0.62) / 0.32) ** 2 < 1);
+const inCheek = (x, y, z) => z > 0.3 && [-0.74, 0.74].some((ex) => ((x - ex) / 0.2) ** 2 + ((y - 0.2) / 0.12) ** 2 < 1);
+function leafPoint(side, kind) {
+  const L = 1.2, ang = side > 0 ? 0.5 : Math.PI - 0.5, ax = Math.cos(ang), ay = Math.sin(ang), t = Math.random();
+  const half = Math.sin(Math.PI * Math.pow(t, 0.85)) * 0.34;
+  const w = kind === 'edge' ? half * (Math.random() < 0.5 ? -1 : 1) : kind === 'vein' ? rnd(-0.012, 0.012) : half * rnd(-0.92, 0.92);
+  return [0.04 * side + ax * L * t - ay * w, 1.92 + ay * L * t * 0.55 + ax * w * 0.65, Math.sin(Math.PI * t) * 0.12 + (kind === 'fill' ? rnd(-0.03, 0.03) : 0)];
+}
+while (K.i < N) {
+  const r = Math.random(), z = Math.random();
+  const dust = z < 0.012 ? rnd(7, 11) : z < 0.08 ? rnd(3.6, 5.5) : rnd(1.2, 2.8);
+  const s = Math.random() < 0.5 ? -1 : 1;
+  if (r < 0.46) { let e; do e = onEllipsoid(HEAD, Math.random() < 0.9); while (inEye(...e.p) || inCheek(...e.p)); add(K, e.p, e.n, Math.random() < 0.06 ? C.gold : Math.random() < 0.05 ? C.mint : C.moon, dust, 0); }
+  else if (r < 0.7) { const e = onEllipsoid(BODY, Math.random() < 0.9); add(K, e.p, e.n, Math.random() < 0.07 ? C.gold : C.moon, dust, 0); }
+  else if (r < 0.735) { const e = onEllipsoid([0.42 * s, -1.42, 0.22, 0.3, 0.15, 0.24]); add(K, e.p, e.n, C.cream, dust, 0); }
+  else if (r < 0.765) { const e = onEllipsoid([0.82 * s, -0.55, 0.1, 0.17, 0.3, 0.17]); add(K, e.p, e.n, C.moon, rnd(1.4, 3), s < 0 ? 3 : 4); }
+  else if (r < 0.83) add(K, leafPoint(s, 'fill'), [0, 0, 1], C.leaf, dust, 1);
+  else if (r < 0.875) add(K, leafPoint(s, 'edge'), [0, 0, 1], C.leafEdge, rnd(1.6, 2.6), 1);
+  else if (r < 0.895) add(K, leafPoint(s, 'vein'), [0, 0, 1], C.vein, rnd(1.4, 2.2), 1);
+  else if (r < 0.905) { const t = Math.random(); add(K, [0.04 * t, 1.58 + 0.36 * t, 0.02], [0, 0, 1], C.leafEdge, 2, 1); }
+  else if (r < 0.935) { const a = rnd(0, 6.28), d = Math.sqrt(Math.random()); add(K, [0.74 * s + Math.cos(a) * 0.18 * d, 0.2 + Math.sin(a) * 0.1 * d, 0.84], [0, 0, 1], C.cheek, rnd(2, 3.4), 2); }
+  else if (r < 0.95) { const a = rnd(Math.PI * 1.15, Math.PI * 1.85); add(K, [Math.cos(a) * 0.16, 0.3 + Math.sin(a) * 0.1, 0.95], [0, 0, 1], C.smile, rnd(1.6, 2.6), 2); }
+  else { const a = rnd(0, 6.28), d = Math.sqrt(Math.random());
+    const p = Math.random() < 0.12 ? [0.42 * s + 0.06 + rnd(-0.025, 0.025), 0.72 + rnd(-0.025, 0.025), 0.98] : [0.42 * s + Math.cos(a) * 0.15 * d, 0.62 + Math.sin(a) * 0.21 * d, 0.94];
+    add(K, p, [0, 0, 1], C.eye, rnd(2.2, 4.2), 5); }
+}
+for (let i = 0; i < N; i++) {
+  const x = K.pos[i * 3], y = K.pos[i * 3 + 1];
+  K.intro.set([(x < 0 ? -1 : 1) * rnd(9, 16), y * 0.6 + rnd(-2.2, 2.2), rnd(-3, 2)], i * 3);
+  const u = rnd(-1, 1), th = rnd(0, 6.28), rr = rnd(4, 12), sq = Math.sqrt(1 - u * u);
+  K.scatter.set([rr * sq * Math.cos(th) * 1.6, rr * u * 0.8, rr * sq * Math.sin(th) - 3], i * 3);
+  const ht = rnd(0, Math.PI * 2), hx = 16 * Math.sin(ht) ** 3, hy = 13 * Math.cos(ht) - 5 * Math.cos(2 * ht) - 2 * Math.cos(3 * ht) - Math.cos(4 * ht);
+  const spread = 1 + (Math.random() - 0.5) * 0.18 * Math.random();
+  K.heart.set([hx * 0.17 * spread + 2.9, hy * 0.17 * spread + 0.6, rnd(-0.5, 0.5)], i * 3); // the heart forms on the right, beside its words
+}
+const kodiMat = makeMaterial({ kodi: true, drift: 0.02 });
+const kodi = toPoints(K, kodiMat);
+scene.add(kodi);
+
+// ---------------- the forest: made of the same living light as Kodi ----------------
+const F = cloud(240000);
+const mixc = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const LEAF_LOW = [0.24, 0.64, 0.58], LEAF_TOP = [0.66, 1.0, 0.84], GLINT = [1.0, 0.86, 0.52], TRUNK = [1.0, 0.8, 0.64];
+const BLOSSOM = [[1.0, 0.66, 0.82], [1.0, 0.9, 0.62], [0.72, 0.8, 1.0]];
+const crownTops = [];
+function trunk(x, z, h, w) {
+  for (let i = 0; i < 700 * h; i++) { // flaring into roots at the foot
+    const t = Math.random(), a = rnd(0, 6.28), r = w * (1.4 - 0.6 * t + (t < 0.08 ? (0.08 - t) * 10 : 0));
+    add(F, [x + Math.cos(a) * r, GROUND + t * h, z + Math.sin(a) * r], [Math.cos(a), 0.1, Math.sin(a)], TRUNK, rnd(2, 3.4));
+  }
+}
+function roundTree(x, z, h) {
+  trunk(x, z, h * 0.6, h * 0.06);
+  const blossom = Math.random() < 0.35 ? BLOSSOM[Math.floor(Math.random() * 3)] : null;
+  const crowns = 4 + Math.floor(Math.random() * 3);
+  for (let k = 0; k < crowns; k++) {
+    const cr = h * rnd(0.22, 0.32), cy = GROUND + h * rnd(0.6, 0.92), cx = x + rnd(-0.32, 0.32) * h * 0.55;
+    crownTops.push([cx, cy, z, cr]);
+    for (let i = 0; i < 2100 * cr * cr; i++) {
+      const e = onEllipsoid([cx, cy, z + rnd(-0.15, 0.15), cr * 1.15, cr * 0.9, cr], Math.random() < 0.94);
+      const lift = (e.p[1] - (GROUND + h * 0.5)) / (h * 0.6);
+      const col = Math.random() < 0.03 ? GLINT : blossom && Math.random() < 0.12 ? blossom : mixc(LEAF_LOW, LEAF_TOP, Math.min(1, Math.max(0, lift)));
+      add(F, e.p, e.n, col, Math.random() < 0.05 ? rnd(3.8, 6) : rnd(1.9, 3.6));
+    }
+  }
+}
+function pineTree(x, z, h) {
+  trunk(x, z, h * 0.3, h * 0.045);
+  const tiers = 4 + Math.floor(Math.random() * 2);
+  for (let k = 0; k < tiers; k++) {
+    const y0 = GROUND + h * (0.18 + 0.68 * k / tiers), th = h * 0.36, r0 = h * 0.3 * (1 - k / (tiers + 0.8));
+    crownTops.push([x, y0 + th * 0.4, z, r0]);
+    for (let i = 0; i < 1500 * r0 * th; i++) {
+      const t = Math.pow(Math.random(), 0.8), a = rnd(0, 6.28), r = r0 * (1 - t) * (Math.random() < 0.82 ? 1 : Math.random());
+      const droop = (1 - t) * 0.12 * r0;
+      const nn = [Math.cos(a), r0 / th, Math.sin(a)], l = Math.hypot(...nn);
+      const col = Math.random() < 0.03 ? GLINT : mixc(LEAF_LOW, LEAF_TOP, Math.min(1, (y0 + t * th - GROUND) / h + 0.15));
+      add(F, [x + Math.cos(a) * r, y0 + t * th - droop, z + Math.sin(a) * r], nn.map((v) => v / l), col, Math.random() < 0.04 ? rnd(3.4, 5) : rnd(1.5, 3));
+    }
+  }
+}
+const planted = [];
+function plant(xr, zr, hr, count, gap) {
+  for (let i = 0; i < count; i++) {
+    let x, z, tries = 0;
+    do { x = rnd(...xr); z = rnd(...zr); tries++; } while (planted.some(([px, pz]) => Math.hypot(px - x, pz - z) < gap) && tries < 60);
+    planted.push([x, z]);
+    const h = rnd(...hr);
+    (Math.random() < 0.4 ? pineTree : roundTree)(x, z, h);
+  }
+}
+plant([-10.5, -3.6], [-6.5, -2.2], [3.0, 4.2], 3, 2.6);   // the grove on the left
+plant([3.6, 10.5], [-6.5, -2.2], [3.0, 4.2], 3, 2.6);     // and on the right
+plant([-15, -4], [-14, -9], [4.2, 5.8], 3, 3.2);    // the deep woods behind, leaving the sky clear above Kodi
+plant([4, 15], [-14, -9], [4.2, 5.8], 3, 3.2);
+
+for (let i = 0; i < 34000; i++) { // grass: short glowing blades, thickest near us
+  const z = 3.8 - Math.pow(Math.random(), 2.2) * 16, x = rnd(-16, 16), h = rnd(0.06, 0.34), t = Math.random();
+  add(F, [x + t * 0.03, GROUND + t * h, z], [0, 1, 0.3], t > 0.78 ? [0.66, 1.0, 0.72] : [0.26, 0.6, 0.44], rnd(1.4, 2.8), 7);
+}
+function mushroom(x, z, s, cap) {
+  for (let i = 0; i < 90; i++) { const t = Math.random(), a = rnd(0, 6.28); add(F, [x + Math.cos(a) * 0.06 * s, GROUND + t * 0.32 * s, z + Math.sin(a) * 0.06 * s], [Math.cos(a), 0, Math.sin(a)], [0.95, 0.9, 0.8], rnd(1.2, 2.2), 11); }
+  for (let i = 0; i < 280; i++) { const e = onEllipsoid([x, GROUND + 0.32 * s, z, 0.24 * s, 0.14 * s, 0.24 * s]); if (e.p[1] < GROUND + 0.3 * s) continue; add(F, e.p, [0, 1, 0.4], Math.random() < 0.12 ? [1, 1, 1] : cap, rnd(1.6, 3.4), 11); }
+}
+[[-2.3, 0.8, 1, [0.45, 0.9, 1.0]], [-1.7, 1.4, 0.7, [0.45, 0.9, 1.0]], [2.1, 0.6, 1.1, [1.0, 0.55, 0.82]], [2.8, -0.4, 0.8, [1.0, 0.55, 0.82]], [-3.4, -1.2, 0.9, [1.0, 0.8, 0.5]], [3.6, 1.5, 0.6, [0.45, 0.9, 1.0]]]
+  .forEach(([x, z, s, c]) => mushroom(x, z, s, c));
+for (let i = 0; i < 260; i++) { // little flowers dotted in the grass
+  const x = rnd(-7, 7), z = rnd(-4, 3), col = [[1, 0.75, 0.85], [1, 0.95, 0.7], [0.75, 0.8, 1]][i % 3];
+  for (let k = 0; k < 7; k++) add(F, [x + rnd(-0.035, 0.035), GROUND + 0.13 + rnd(-0.02, 0.02), z + rnd(-0.035, 0.035)], [0, 1, 0], col, rnd(1.4, 2.6), 11);
+}
+for (let i = 0; i < 260; i++) { // leaves let go of the crowns and drift down
+  const [cx, cy, cz, cr] = crownTops[Math.floor(Math.random() * crownTops.length)];
+  add(F, [cx + rnd(-cr, cr), cy + rnd(-cr * 0.3, cr * 0.5), cz + rnd(-0.4, 0.4)], [0, 0, 1], Math.random() < 0.4 ? GLINT : LEAF_TOP, rnd(2.4, 4), 8);
+}
+for (let i = 0; i < 520; i++) { // fireflies all through the woods, more near the ground
+  add(F, [rnd(-14, 14), GROUND + 0.2 + Math.pow(Math.random(), 1.8) * 4, rnd(-12, 3.5)], [0, 0, 1], Math.random() < 0.7 ? C.gold : C.mint, rnd(3, 6.5), 9);
+}
+const forestMat = makeMaterial({ kodi: false, drift: 0.006, fade: 0, size: 1.15 });
+const forest = toPoints(F, forestMat);
+scene.add(forest);
+
+// the stars above the trees
+const S = cloud(2200);
+for (let i = 0; i < 2200; i++) { const th = rnd(0, 6.28), r = rnd(20, 40); add(S, [r * Math.cos(th) * 1.4, rnd(4, 22), -r], [0, 0, 1], [0.86, 0.88, 1.0], rnd(1, 2.6)); }
+const skyMat = makeMaterial({ kodi: false, drift: 0.35, fade: 0 });
+const sky = toPoints(S, skyMat);
+scene.add(sky);
+
+// Kodi's firefly friend, and a warm lantern-light in his chest
+const glowTex = (inner, mid) => {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grd.addColorStop(0, inner); grd.addColorStop(0.25, mid); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+};
+const sprite = (tex) => new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+const glow = sprite(glowTex('rgba(255,236,200,0.7)', 'rgba(255,214,150,0.25)')); glow.scale.set(4, 4, 1); scene.add(glow);
+const buddy = sprite(glowTex('rgba(255,250,220,1)', 'rgba(255,200,90,0.5)')); buddy.scale.set(0.55, 0.55, 1); scene.add(buddy);
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  KSCALE = w < 760 ? 0.55 : 0.8;
+}
+let KSCALE = 0.8;
+addEventListener('resize', resize); resize();
+camera.lookAt(0, -0.25, 0);
+
+// ---------------- the woods: three layers of moonlit silhouettes, hazier with distance ----------------
+function buildWoods() {
+  const layers = [
+    // only the faraway tree line stays a silhouette; everything near is living light
+    { base: 532, h: [60, 130], w: [34, 70], n: 40, fill: '#131F3C', rim: '#22385E', gap: 120, blur: 1.6, fog: '#1A2B4A' },
+  ];
+  const host = document.getElementById('woods');
+  return layers.map((L, li) => {
+    let shapes = '';
+    const xs = [];
+    for (let i = 0; i < L.n; i++) {
+      let x = L.sides ? (i % 2 ? rnd(1060, 1520) : rnd(-80, 380)) : (i + Math.random() * 0.8) * (1600 / L.n) - 80;
+      if (!L.sides && Math.abs(x - 720) < L.gap) continue; // keep the sky clear behind Kodi
+      xs.push(x);
+      const h = rnd(...L.h), w = rnd(...L.w), b = L.base + rnd(-6, 6);
+      let d = '';
+      if (Math.random() < 0.45) { // a pine: stacked tiers
+        const tiers = 4 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < tiers; k++) {
+          const ty = b - h * (0.18 + 0.82 * k / tiers), tw = w * (1 - k / (tiers + 0.6)) * 0.6, th = h * 0.32;
+          d += `M${x - tw} ${ty} L${x} ${ty - th} L${x + tw} ${ty} Z `;
+        }
+        d += `M${x - w * 0.05} ${b} h${w * 0.1} v${-h * 0.22} h${-w * 0.1} Z`;
+      } else { // a broad tree: a few overlapping crowns on a trunk
+        d += `M${x - w * 0.07} ${b} h${w * 0.14} v${-h * 0.55} h${-w * 0.14} Z `;
+        const crowns = 4 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < crowns; k++) {
+          const cx = x + rnd(-0.35, 0.35) * w, cy = b - h * rnd(0.55, 0.92), r = w * rnd(0.28, 0.42);
+          d += `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0 Z `;
+        }
+      }
+      shapes += `<path d="${d}" fill="url(#lit${li})"/>`;
+    }
+    // moonlight from above: each layer's trees are lighter at the top, and mist gathers at their feet
+    const defs = `<defs>
+      <linearGradient id="lit${li}" x1="0.7" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="${L.rim}"/><stop offset="0.45" stop-color="${L.fill}"/></linearGradient>
+      <linearGradient id="fog${li}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${L.fog}" stop-opacity="0"/><stop offset="1" stop-color="${L.fog}" stop-opacity="0.9"/></linearGradient>
+    </defs>`;
+    shapes += `<rect x="-200" y="${L.base - 70}" width="1840" height="78" fill="url(#fog${li})"/>`;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 1440 900'); svg.setAttribute('preserveAspectRatio', 'xMidYMax slice');
+    svg.innerHTML = defs + shapes; svg.style.opacity = 0;
+    if (L.blur) svg.style.filter = `blur(${L.blur}px)`;
+    host.appendChild(svg);
+    return svg;
+  });
+}
+const woodsLayers = buildWoods();
+
+// ---------------- forest friends: a rabbit that hops through, and birds overhead ----------------
+const critterMat = makeMaterial({ kodi: false, drift: 0.002, fade: 0, size: 1.1 });
+function rabbitCloud() {
+  const R = cloud(2600), fur = [0.96, 0.92, 1.0];
+  const parts = [[[0, 0.17, 0, 0.21, 0.16, 0.14], 1200], [[0.2, 0.33, 0, 0.11, 0.1, 0.09], 520], [[0.16, 0.54, 0.035, 0.03, 0.13, 0.025], 200], [[0.2, 0.53, -0.035, 0.03, 0.12, 0.025], 200], [[-0.22, 0.2, 0, 0.055, 0.055, 0.055], 150], [[0.08, 0.04, 0.07, 0.07, 0.04, 0.04], 120], [[0.08, 0.04, -0.07, 0.07, 0.04, 0.04], 120]];
+  for (const [c, n] of parts) for (let i = 0; i < n; i++) { const e = onEllipsoid(c, Math.random() < 0.85); add(R, e.p, e.n, fur, rnd(1.2, 2.4), 10); }
+  for (let i = 0; i < 30; i++) add(R, [0.29 + rnd(-0.01, 0.01), 0.36 + rnd(-0.01, 0.01), 0.05], [0, 0, 1], [1, 0.7, 0.8], 2.2, 10); // a pink nose
+  return toPoints(R, critterMat);
+}
+const rabbit = rabbitCloud(); scene.add(rabbit);
+function birdParts() {
+  const body = cloud(260), wing = () => cloud(420), col = [0.85, 0.92, 1.0];
+  for (let i = 0; i < 260; i++) { const e = onEllipsoid([0, 0, 0, 0.14, 0.05, 0.05]); add(body, e.p, e.n, col, rnd(1.2, 2.2), 10); }
+  const wings = [1, -1].map((side) => {
+    const w = wing();
+    for (let i = 0; i < 420; i++) { const t = Math.random(), chord = (1 - t) * 0.16; add(w, [rnd(-chord, chord * 0.4) - t * 0.08, Math.sin(Math.PI * t) * 0.04, side * t * 0.42], [0, 1, 0], col, rnd(1.1, 2), 10); }
+    return toPoints(w, critterMat);
+  });
+  const g = new THREE.Group(); g.add(toPoints(body, critterMat), ...wings);
+  return { g, wings };
+}
+const birds = [0, 1, 2].map(() => { const b = birdParts(); scene.add(b.g); return b; });
+
+// ---------------- Kodi's day: things he does on his own ----------------
+const ACTS = { wave: 2.6, hop: 1.0, hops: 2.0, twirl: 1.6, play: 4.2, look: 2.4 };
+let act = { name: 'none', start: 0, dur: 0 }, nextAt = 4.6, lastAct = '';
+function pick(t) {
+  const names = Object.keys(ACTS).filter((n) => n !== lastAct && n !== 'wave');
+  const name = act.name === 'none' ? 'wave' : names[Math.floor(Math.random() * names.length)];
+  lastAct = name; act = { name, start: t, dur: ACTS[name] }; nextAt = t + ACTS[name] + rnd(1.2, 2.8);
+}
+let blinkAt = 5;
+
+const $ = (id) => document.getElementById(id);
+// ?mode=signin: just the forest, Remi standing to the right, reacting to the sign-in form (told by postMessage)
+const SIGNIN = new URLSearchParams(location.search).get('mode') === 'signin';
+const FORCE_PEEK = new URLSearchParams(location.search).get('peek') === '1'; // for testing the shy pose
+let typing = 'idle', typedAt = 0, typedLen = 0, peek = 0, attend = 0;
+if (SIGNIN) {
+  document.body.classList.add('signin-mode');
+  // the form is on this page: tell Remi directly what is being typed
+  const em = document.getElementById('siEmail'), pw = document.getElementById('siPass'), bub = document.getElementById('siBubble');
+  const say = (remi, len) => { typing = remi; typedAt = performance.now() / 1000; typedLen = len ?? typedLen; bub.classList.toggle('on', remi === 'password'); };
+  em.addEventListener('focus', () => say('email', em.value.length)); em.addEventListener('input', () => say('email', em.value.length));
+  pw.addEventListener('focus', () => say('password')); pw.addEventListener('input', () => say('password'));
+  for (const el of [em, pw]) el.addEventListener('blur', () => say('idle'));
+  addEventListener('message', (e) => {
+    if (e.data && e.data.remi) { typing = e.data.remi; typedAt = performance.now() / 1000; typedLen = e.data.len ?? typedLen; }
+  });
+}
+const heartBox = document.querySelector('.heart');
+const clamp01 = (x) => Math.min(1, Math.max(0, x));
+const smooth = (x) => x * x * (3 - 2 * x);
+let scrollP = 0;
+addEventListener('scroll', () => { scrollP = scrollY; }, { passive: true });
+const mouseTarget = new THREE.Vector3(99, 99, 0), ndc = new THREE.Vector3();
+let mouseIn = false, hover = 0, mouseX = 0;
+addEventListener('pointermove', (e) => {
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1, 0.5).unproject(camera);
+  const dir = ndc.sub(camera.position).normalize();
+  mouseTarget.copy(camera.position).addScaledVector(dir, -camera.position.z / dir.z);
+  mouseX = (e.clientX / innerWidth) * 2 - 1; mouseIn = true;
+});
+document.addEventListener('pointerleave', () => { mouseIn = false; });
+
+const clock = new THREE.Clock();
+let sScatter = 0, sHeart = 0, yaw = 0;
+function frame() {
+  const t = clock.getElapsedTime(), vh = innerHeight, p = scrollP / vh;
+  const hb = heartBox.getBoundingClientRect();
+  sScatter += (clamp01((p - 0.15) / 0.9) - sScatter) * 0.08;
+  sHeart += ((SIGNIN ? 0 : clamp01((1 - Math.abs((hb.top + hb.height / 2 - vh / 2) / (vh * 0.7))) * 1.25)) - sHeart) * 0.06; // no heart section on the sign-in page
+  const wordIn = 1 - Math.pow(1 - clamp01((t - 0.15) / 1.4), 3), wordGone = clamp01((t - 3.6) / 1.0), formed = clamp01((t - 0.3) / 3.0);
+  shared.uIntro.value = formed; shared.uTime.value = t; shared.uScatter.value = sScatter; shared.uHeart.value = Math.min(1, sHeart);
+  // the forest grows in around Kodi, and dims behind the words as you scroll
+  const woods = clamp01((t - 0.6) / 2.4) * (1 - 0.6 * clamp01(p / 0.9));
+  forestMat.uniforms.uFade.value = woods; skyMat.uniforms.uFade.value = clamp01((t - 0.2) / 2) * (1 - 0.3 * clamp01(p));
+  woodsLayers.forEach((svg, i) => {
+    svg.style.opacity = clamp01((t - 0.3 - i * 0.35) / 1.6) * (1 - 0.45 * clamp01(p / 0.9));
+    svg.style.transform = `translate(${-mouseX * (4 + i * 7) * hover - Math.sin(t * 0.07) * (3 + i * 6)}px, ${p * (10 + i * 30)}px)`;
+  });
+  const alone = clamp01((t - 4.0) / 0.8) * (1 - sScatter);
+  hover += ((mouseIn ? 1 : 0) * alone - hover) * 0.06;
+  shared.uMouse.value.lerp(mouseTarget, 0.18); shared.uHover.value = hover;
+
+  // what Kodi is doing right now
+  if (alone > 0.5 && t > nextAt) pick(t);
+  const ph = act.dur ? clamp01((t - act.start) / act.dur) : 1, live = ph < 1 ? 1 : 0, env = Math.sin(Math.PI * ph) * live;
+  let jump = 0, squash = 0, armR = 0.15 * Math.sin(t * 1.3), armL = -0.15 * Math.sin(t * 1.3 + 1), spin = 0, look = 0;
+  if (act.name === 'wave' && live) { armR = env * (2.5 + 0.35 * Math.sin(t * 11)); armL = env * 0.4; look = 0.15 * env; }
+  if ((act.name === 'hop' || act.name === 'hops') && live) {
+    const n = act.name === 'hop' ? 1 : 2, q = (ph * n) % 1;
+    jump = Math.sin(Math.PI * q) * 0.55; squash = q < 0.12 || q > 0.88 ? 0.12 : -0.05; armR = armL = 0.9 * Math.sin(Math.PI * q);
+  }
+  if (act.name === 'twirl' && live) { spin = smooth(ph) * Math.PI * 2; armR = armL = 1.2 * env; jump = 0.2 * env; }
+  if (act.name === 'look' && live) look = 0.5 * env * Math.sin(t * 1.6);
+  // play: the firefly friend swoops close, Kodi hops after it and follows it with his eyes
+  const near = act.name === 'play' && live ? env : 0;
+  const ang = t * (0.6 + near * 1.2), rad = 2.4 - near * 1.1;
+  buddy.position.set(kodi.position.x + Math.cos(ang) * rad * KSCALE * 1.4, (0.9 + Math.sin(t * 1.7) * 0.45 - near * 0.4) * KSCALE, Math.sin(ang) * 1.3);
+  if (near) { jump = Math.abs(Math.sin(t * 6)) * 0.28 * near; look = Math.atan2(buddy.position.x, 3) * 1.4 * near; armR = armL = 1.4 * near; }
+  // the wind comes in gusts
+  shared.uWind.value = 0.8 + 0.9 * Math.pow(Math.max(0, Math.sin(t * 0.23)), 3);
+  critterMat.uniforms.uFade.value = woods;
+  // a rabbit hops across behind Kodi every so often, stopping halfway to nibble the grass
+  const ru = (t - 6) % 16;
+  rabbit.visible = t > 6 && ru < 9;
+  if (rabbit.visible) {
+    const paused = ru >= 3.2 && ru < 4.8;
+    const travel = ru < 3.2 ? (ru / 3.2) * 0.36 : paused ? 0.36 : 0.36 + ((ru - 4.8) / 4.2) * 0.64;
+    rabbit.position.set(-9 + travel * 18, GROUND + (paused ? 0 : Math.abs(Math.sin(ru * Math.PI * 2.3)) * 0.3), -1.7);
+    rabbit.rotation.z = paused ? -0.18 - 0.06 * Math.sin(t * 9) : 0.12 * Math.sin(ru * Math.PI * 4.6);
+    if (!live && alone > 0.5) look = Math.atan2(rabbit.position.x, 5) * 1.2; // Kodi turns to watch it
+  }
+  // a little flock crosses the sky
+  const bu = (t - 8) % 19;
+  birds.forEach((b, i) => {
+    b.g.visible = t > 8 && bu < 11;
+    if (!b.g.visible) return;
+    b.g.position.set(13 - bu * 2.5 + i * 0.9, 2.5 + i * 0.35 + Math.sin(bu * 1.4 + i) * 0.15, -6 - i * 0.6);
+    b.g.rotation.y = Math.PI;
+    const flap = Math.sin(t * 9 + i * 1.7) * 0.75;
+    b.wings[0].rotation.x = -flap; b.wings[1].rotation.x = flap;
+  });
+  if (hover > 0.3) look = mouseX * 0.55 * hover + look * (1 - hover);
+  // a blink every few seconds: the eyes close and open over 0.18 s
+  if (t > blinkAt) blinkAt = t + rnd(2.5, 5);
+  const toBlink = blinkAt - t;
+  shared.uBlink.value = toBlink < 0.18 ? 1 - 0.9 * Math.sin(Math.PI * toBlink / 0.18) : 1;
+  const calm = (1 - sScatter) * (0.35 + 0.65 * formed);
+  shared.uArmR.value = armR * calm; shared.uArmL.value = armL * calm;
+  yaw += ((Math.sin(t * 0.45) * 0.22 + look) * calm - yaw) * 0.08;
+  let tilt = 0;
+  if (SIGNIN) {
+    // watching the email being typed: turn towards the form on the left, lean in, follow the letters
+    const busyTyping = performance.now() / 1000 - typedAt < 4;
+    // eased by time, not by frame, so it takes the same moment on a slow tablet as on a fast laptop
+    const dt = Math.min(0.1, t - (frame.lastT ?? t)); frame.lastT = t;
+    attend += (((typing === 'email' && busyTyping) || typing === 'password' || FORCE_PEEK ? 1 : 0) - attend) * (1 - Math.exp(-dt * 5));
+    peek += ((typing === 'password' || FORCE_PEEK ? 1 : 0) - peek) * (1 - Math.exp(-dt * 7));
+    shared.uPeek.value = peek;
+    if (location.search.includes('debug=1')) document.getElementById('siBubble').textContent = typing + ' ' + peek.toFixed(2) + ' ' + attend.toFixed(2);
+    const follow = typing === 'email' ? Math.min(typedLen, 30) / 30 : 0.5;
+    // while the password is typed he faces you, leaves over his eyes; otherwise he watches the form
+    const target = typing === 'password' || FORCE_PEEK ? 0.05 : -0.75 + follow * 0.35;
+    yaw = yaw * (1 - attend) + target * attend;
+    tilt = 0.14 * attend * (1 - peek) - 0.05 * peek;
+    if (peek > 0.5) jump = 0, armR *= 1 - peek, armL *= 1 - peek;
+  }
+  kodi.rotation.y = yaw + spin + t * 0.02 * sScatter;
+  kodi.rotation.x = Math.sin(t * 0.3) * 0.04 * calm + tilt;
+  const footY = GROUND + 1.57 * KSCALE; // stand on the grass
+  kodi.position.y = (footY + jump * KSCALE) * calm + Math.sin(t * 1.1) * 0.03 * calm;
+  if (SIGNIN) kodi.position.x = innerWidth > 860 ? 2.2 : 0;
+  kodi.scale.set(KSCALE * (1 + squash * 0.6), KSCALE * (1 - squash), KSCALE * (1 + squash * 0.6));
+  glow.material.opacity = 0.45 * (1 - sScatter) * clamp01((t - 2.0) / 1.5);
+  glow.position.set(kodi.position.x, kodi.position.y - 0.45 * KSCALE, -0.7);
+  buddy.material.opacity = clamp01((t - 4.4) / 0.8) * (1 - sScatter) * (0.75 + 0.25 * Math.sin(t * 9));
+  sky.rotation.y = Math.sin(t * 0.02) * 0.04;
+  camera.position.x = Math.sin(t * 0.07) * 0.25 + mouseX * 0.25 * hover;
+  camera.lookAt(0, -0.25, 0);
+
+  const out = Math.max(clamp01(p / 0.8), wordGone), fromEdge = (1 - wordIn) * innerWidth * 0.5;
+  $('splitL').style.transform = `translate(${-fromEdge - out * 60}px, -50%)`; $('splitL').style.opacity = wordIn * (1 - out);
+  $('splitR').style.transform = `translate(${fromEdge + out * 60}px, -50%)`; $('splitR').style.opacity = wordIn * (1 - out);
+  // the title plate under Kodi arrives with the words and stays once they have gone, until you scroll
+  $('plate').style.opacity = clamp01((t - 1.0) / 1.2) * (1 - clamp01(p / 0.45));
+  $('hint').style.opacity = 0.5 + 0.5 * clamp01((t - 4.4) / 0.8);
+  const h = clamp01((p - 0.75) / 0.35) * (1 - clamp01((p - 1.6) / 0.3));
+  $('headline').style.opacity = h; $('headline').style.transform = `translateY(calc(-50% + ${(1 - h) * 18}px))`;
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

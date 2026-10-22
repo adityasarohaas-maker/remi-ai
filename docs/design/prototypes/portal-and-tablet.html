@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remi — pages v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0B0F1E; color: #F5F3EE; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; padding: 40px 24px 120px; }
+  .review { max-width: 1240px; margin: 0 auto; }
+  .review > header h1 { margin: 0 0 6px; font-weight: 500; font-size: 30px; letter-spacing: -.03em; }
+  .review > header p { margin: 0 0 20px; color: #AEB4C8; max-width: 62em; line-height: 1.6; }
+  .label { display: flex; align-items: baseline; gap: 12px; margin: 56px 0 14px; flex-wrap: wrap; }
+  .label b { font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+  .label span { color: #AEB4C8; font-size: 14px; }
+  .screen { border-radius: 22px; overflow: hidden; border: 1px solid #ffffff1f; box-shadow: 0 40px 100px -40px #000; position: relative; }
+  .hand { font-family: 'Caveat', cursive; }
+  .btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; border: 0; font: inherit; font-weight: 600; font-size: 15.5px; padding: 14px 22px; border-radius: 999px; cursor: pointer;
+      background: linear-gradient(180deg, #FFCF7A, #F2A93B); color: #241503; box-shadow: 0 10px 30px -10px #F2A93B99, inset 0 1px 0 #ffffff99; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; letter-spacing: -.02em; }
+
+  /* ---------- A · sign-in: the live forest, Remi reacting to the form ---------- */
+  .signin { height: 660px; background: #070B22; }
+  .signin iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .signin .shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #070B22e6 0%, #070B2299 34%, transparent 58%); }
+  .signin .card { position: absolute; left: 56px; top: 50%; transform: translateY(-50%); width: min(430px, 86%); padding: 36px; border-radius: 28px; background: #0B1230b8; border: 1px solid #ffffff22; backdrop-filter: blur(16px); box-shadow: 0 30px 80px -30px #000; }
+  .signin h2 { margin: 26px 0 6px; font-weight: 500; font-size: 34px; letter-spacing: -.04em; }
+  .signin .sub { margin: 0 0 24px; color: #AEB4C8; }
+  .field { display: block; margin-bottom: 14px; }
+  .field span { display: block; font-size: 13.5px; color: #C9CEDD; margin-bottom: 6px; }
+  .field input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #ffffff2a; background: #ffffff0d; color: #fff; font: inherit; font-size: 16px; outline: none; transition: border-color .2s, background .2s; }
+  .field input:focus { border-color: #FFCF7A99; background: #ffffff14; }
+  .signin .btn { width: 100%; margin-top: 8px; }
+  .signin .alt { margin: 20px 0 0; font-size: 14.5px; color: #AEB4C8; }
+  .signin .alt a { color: #FFE1A8; }
+  .signin .bubble { position: absolute; right: 22%; top: 16%; padding: 10px 16px; border-radius: 18px 18px 18px 4px; background: #ffffffe8; color: #16203B; font-size: 22px; box-shadow: 0 10px 30px -10px #000; opacity: 0; transform: translateY(6px); transition: opacity .35s, transform .35s; }
+  .signin .bubble.on { opacity: 1; transform: none; }
+  .try { margin-left: 12px; color: #8F97B0; font-size: 13px; }
+  .si-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .si-pair figure { margin: 0; }
+  .si-pair img { width: 100%; display: block; border-radius: 18px; border: 1px solid #ffffff1f; }
+  .si-pair figcaption { margin-top: 8px; color: #AEB4C8; font-size: 14px; }
+
+  /* ---------- tokens: the forest by day and by night ---------- */
+  .day { --ink: #16203B; --dim: #5A6580; --line: #16203B17; --card: #FFFFFF; --soft: #F3F7F5; --accent: #2F7A5E; --accent-soft: #DDF1E6; --page: linear-gradient(180deg, #F4F7FB, #E6F1EB); --dock: #FFFFFFd9; --paper: #FFFDF7; --paperline: #EDE4D2; }
+  .night { --ink: #F3F2EE; --dim: #A9B0C6; --line: #ffffff1c; --card: #ffffff0d; --soft: #ffffff08; --accent: #8FE3B5; --accent-soft: #8FE3B51f; --page: linear-gradient(180deg, #0A0F27, #102035); --dock: #0B1230b3; --paper: #1A2342; --paperline: #2A3560; }
+  .portal { background: var(--page); color: var(--ink); padding: 0 0 48px; }
+  .p-dock { margin: 18px auto 0; width: fit-content; display: flex; align-items: center; gap: 26px; padding: 8px 8px 8px 18px; border-radius: 999px; background: var(--dock); border: 1px solid var(--line); backdrop-filter: blur(12px); box-shadow: 0 14px 40px -24px #16203B55; position: relative; z-index: 2; }
+  .p-dock nav { display: flex; gap: 4px; font-size: 14.5px; }
+  .p-dock nav span { padding: 8px 13px; border-radius: 999px; color: var(--dim); }
+  .p-dock nav span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .p-dock .me { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 600; font-size: 14px; }
+  .night .p-dock .me { color: #0A0F27; }
+
+  /* the day as a walk through the forest */
+  .path-hero { position: relative; margin: 18px 28px 0; height: 380px; border-radius: 28px; overflow: hidden; border: 1px solid var(--line); }
+  .path-hero svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .path-hero .head { position: absolute; left: 32px; top: 26px; }
+  .path-hero .date { font-size: 14.5px; color: var(--dim); }
+  .night .path-hero .date { color: #C9CEDD; }
+  .path-hero h2 { margin: 2px 0 12px; font-weight: 500; font-size: 40px; letter-spacing: -.045em; }
+  .weather { display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px 7px 9px; border-radius: 999px; background: #ffffffcc; border: 1px solid #16203B14; font-size: 14px; font-weight: 500; color: #8A5A10; }
+  .night .weather { background: #ffffff14; border-color: #ffffff22; color: #FFE1A8; }
+  .tip { position: absolute; width: 250px; padding: 12px 14px; border-radius: 16px; background: #fff; color: #16203B; box-shadow: 0 18px 40px -16px #16203B66; font-size: 14px; line-height: 1.5; }
+  .night .tip { background: #1C2648; color: #F3F2EE; box-shadow: 0 18px 40px -16px #000; border: 1px solid #ffffff22; }
+  .tip time { display: block; font-size: 12.5px; color: var(--dim); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .tip:after { content: ''; position: absolute; left: 28px; bottom: -7px; width: 14px; height: 14px; background: inherit; transform: rotate(45deg); border-radius: 3px; }
+  .legend { position: absolute; right: 24px; top: 26px; display: flex; gap: 14px; font-size: 13px; color: var(--dim); background: #ffffffb3; padding: 8px 12px; border-radius: 999px; }
+  .night .legend { background: #0B123099; color: #C9CEDD; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+  .p-grid { padding: 22px 28px 0; display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 18px 40px -30px #16203B40; }
+  .night .card { box-shadow: none; backdrop-filter: blur(10px); }
+  .card h3 { margin: 0 0 4px; font-weight: 500; font-size: 18px; letter-spacing: -.02em; }
+  .card .hint { color: var(--dim); font-size: 13.5px; }
+  /* the evening note, as a letter from Remi */
+  .letter { grid-column: 1 / span 7; position: relative; background: var(--paper); padding: 30px 34px 28px;
+      background-image: repeating-linear-gradient(180deg, transparent 0 33px, var(--paperline) 33px 34px); background-position: 0 92px; }
+  .letter .from { display: flex; justify-content: space-between; align-items: baseline; }
+  .letter .dear { margin: 18px 0 6px; font-size: 32px; color: var(--accent); }
+  .letter p { margin: 0; font-size: 18px; line-height: 34px; }
+  .letter .sign { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 28px; color: var(--accent); }
+  .letter .seal { position: absolute; right: 26px; bottom: 22px; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #F7C46A, #E39A2C); box-shadow: 0 8px 20px -8px #E39A2Caa, inset 0 -3px 6px #00000026; transform: rotate(-8deg); }
+  .side { grid-column: 8 / span 5; display: grid; gap: 20px; align-content: start; }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 14px; text-align: center; }
+  .week div { padding: 10px 0 8px; border-radius: 16px; background: var(--soft); border: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+  .week div.today { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+  .week svg { display: block; margin: 0 auto 6px; }
+  .jars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .jar { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 18px; background: var(--soft); border: 1px solid var(--line); }
+  .jar b { display: block; font-size: 24px; font-weight: 500; letter-spacing: -.03em; }
+  .jar span { font-size: 13px; color: var(--dim); }
+  .calm { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-weight: 500; font-size: 14.5px; }
+
+  /* ---------- D · tablet ---------- */
+  .tabs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .tablet { border-radius: 34px; padding: 16px; background: linear-gradient(180deg, #2A2F45, #151A2A); border: 1px solid #ffffff22; }
+  .t-screen { aspect-ratio: 4/3; border-radius: 20px; overflow: hidden; position: relative; background: linear-gradient(180deg, #F2F6FB, #E3F0E8); color: #16203B; }
+  .t-back { position: absolute; left: 26px; top: 22px; font-size: 20px; font-weight: 600; color: #2F7A5E; z-index: 2; }
+  .stones svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stone-label { position: absolute; font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+  .stone-label time { display: block; font-size: 16px; font-weight: 500; color: #5A6580; font-variant-numeric: tabular-nums; }
+  .stone-label.done { color: #5A6580; }
+  .stone-label.now { color: #8A5A10; }
+  .t-title { position: absolute; right: 28px; top: 22px; text-align: right; }
+  .t-title b { display: block; font-size: 38px; letter-spacing: -.04em; }
+  .t-title span { font-size: 17px; color: #5A6580; }
+  .polaroid { position: absolute; left: 50%; top: 52%; width: 56%; transform: translate(-50%, -50%) rotate(-4deg); background: #fff; padding: 14px 14px 18px; border-radius: 6px; box-shadow: 0 30px 60px -24px #16203B88; }
+  .polaroid .ph { aspect-ratio: 1/0.82; border-radius: 3px; background: radial-gradient(60% 70% at 50% 40%, #D7B79B, #8E6A53 70%, #5E4637); position: relative; overflow: hidden; }
+  .polaroid .ph:after { content: ''; position: absolute; left: 50%; top: 24%; width: 30%; aspect-ratio: 1; border-radius: 50%; transform: translateX(-50%); background: #E5C7AA; box-shadow: 0 90px 0 40px #3E6A8A; }
+  .polaroid .name { margin-top: 8px; text-align: center; font-size: 46px; line-height: 1; color: #16203B; }
+  .polaroid .rel { text-align: center; font-size: 18px; color: #5A6580; }
+  .peek { position: absolute; right: -34px; top: -44px; width: 92px; transform: rotate(14deg); }
+  .notes { margin-top: 14px; color: #AEB4C8; font-size: 14.5px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="review">
+  <header>
+    <h1>Sign-in, family portal and tablet — v2</h1>
+    <p>One playful idea per page, each one also useful. Try A: click into the email box and type, then click the password box.</p>
+  </header>
+
+  <div class="label"><b>A · Sign-in</b><span>The living forest. Remi watches you type your email, and covers his eyes with his leaves while you type the password.</span></div>
+  <div class="si-pair">
+    <figure><img src="signin-email.jpg" alt="Remi turned towards the form while an email is typed"><figcaption>Typing the email: Remi turns and watches the letters appear.</figcaption></figure>
+    <figure><img src="signin-pass.jpg" alt="Remi covering his eyes with his leaves while the password is typed"><figcaption>Typing the password: he faces you and covers his eyes with his leaves.</figcaption></figure>
+  </div>
+  <p><a class="btn" href="landing-and-signin.html?mode=signin" target="_blank" rel="noopener">Try the live sign-in ↗</a> <span class="try">Opens in a new tab. Click the email box and type, then the password box.</span></p>
+
+  <div class="label"><b>B · Family portal, by day</b><span>Her day as a walk through the forest: lit lanterns are done, fireflies are conversations, Remi stands at "now"</span></div>
+  <div class="screen" id="portal-day"></div>
+
+  <div class="label"><b>C · The same page after 7 pm</b><span>The walk at dusk, every lantern lit; tonight's letter from Remi has arrived</span></div>
+  <div class="screen" id="portal-night"></div>
+
+  <div class="label"><b>D · Tablet</b><span>"My day" as stepping stones; "Who is this?" as a photo with Remi peeking over it</span></div>
+  <div class="tabs-row">
+    <div class="tablet"><div class="t-screen stones" id="stones"></div></div>
+    <div class="tablet"><div class="t-screen">
+      <span class="t-back">‹ Back</span>
+      <div class="polaroid">
+        <svg class="peek" viewBox="0 0 200 200" aria-hidden="true"><ellipse cx="100" cy="110" rx="56" ry="52" fill="#fff" stroke="#DDEBE3" stroke-width="3"/><path d="M100 60C100 48 103 40 107 34" stroke="#3E8E5E" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M107 38C121 22 143 26 147 34 135 48 117 48 107 38Z" fill="#6FC287"/><path d="M103 42C89 28 67 32 63 40 75 52 93 52 103 42Z" fill="#94D9A5"/><ellipse cx="80" cy="112" rx="10" ry="13" fill="#24331F"/><ellipse cx="120" cy="112" rx="10" ry="13" fill="#24331F"/><circle cx="83" cy="107" r="4" fill="#fff"/><circle cx="123" cy="107" r="4" fill="#fff"/><ellipse cx="64" cy="132" rx="9" ry="5.5" fill="#F7A8C4" opacity=".7"/><ellipse cx="136" cy="132" rx="9" ry="5.5" fill="#F7A8C4" opacity=".7"/><path d="M70 160 q30 -14 60 0" stroke="#DDEBE3" stroke-width="10" stroke-linecap="round" fill="none"/></svg>
+        <div class="ph"></div>
+        <div class="name hand">Rohan</div>
+        <div class="rel">your grandson · he visited on Sunday</div>
+      </div>
+    </div></div>
+  </div>
+  <p class="notes">Tablet text stays at least 20px and nothing relies on colour alone: done stones carry a tick, the current one glows gold with Remi sitting beside it and says "now".</p>
+</div>
+
+<script>
+// ---- B/C: the portal ----
+const leaf = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c0-5 0-8 2-11" stroke="#5DBB8A" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M14 10c3-4 7-3 8-2-2 3-5 4-8 2Z" fill="#7FD9A4"/><path d="M12.6 12C9.5 8.5 5 9.3 4 10.4c2.3 2.8 6 3.4 8.6 1.6Z" fill="#5DBB8A"/></svg>';
+const kodiSvg = (x, y, w, night) => `<g transform="translate(${x - w / 2} ${y - w}) scale(${w / 200})"><ellipse cx="100" cy="190" rx="44" ry="7" fill="#000" opacity=".12"/>${night ? '<circle cx="100" cy="110" r="95" fill="#FFE9B8" opacity=".12"/>' : ''}<ellipse cx="100" cy="146" rx="34" ry="32" fill="#fff" stroke="#DDEBE3" stroke-width="3"/><ellipse cx="100" cy="94" rx="50" ry="46" fill="#fff" stroke="#DDEBE3" stroke-width="3"/><path d="M100 50C100 40 102 32 106 26" stroke="#3E8E5E" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M106 30C120 14 142 18 146 26 134 40 116 40 106 30Z" fill="#6FC287"/><path d="M102 34C88 20 66 24 62 32 74 44 92 44 102 34Z" fill="#94D9A5"/><ellipse cx="82" cy="96" rx="10" ry="13" fill="#24331F"/><ellipse cx="118" cy="96" rx="10" ry="13" fill="#24331F"/><circle cx="85" cy="91" r="4" fill="#fff"/><circle cx="121" cy="91" r="4" fill="#fff"/><ellipse cx="66" cy="114" rx="9" ry="5.5" fill="#F7A8C4" opacity=".7"/><ellipse cx="134" cy="114" rx="9" ry="5.5" fill="#F7A8C4" opacity=".7"/><path d="M90 116 q10 8 20 0" stroke="#24331F" stroke-width="3" fill="none" stroke-linecap="round"/></g>`;
+const W = 1184, H = 380;
+const xAt = (h) => 70 + ((h - 7) / 14) * (W - 140);        // 7 am to 9 pm across the path
+const yAt = (x) => 300 - Math.sin(x / 190) * 26 - (x / W) * 18; // the path winds gently uphill
+function pathD() { let d = ''; for (let x = -20; x <= W + 20; x += 10) d += (d ? ' L' : 'M') + x + ' ' + yAt(x).toFixed(1); return d; }
+function treesRow(night, base, scale, seed, colA, colB) {
+  let s = '';
+  for (let i = 0; i < 26; i++) {
+    const x = ((i * 137 + seed * 53) % (W + 120)) - 60, h = (50 + ((i * 41 + seed * 17) % 60)) * scale, y = base + ((i * 29) % 14);
+    if (i % 3 === 0) s += `<path d="M${x - h * 0.32} ${y} L${x} ${y - h * 1.25} L${x + h * 0.32} ${y}Z" fill="${colB}"/>`;
+    else s += `<rect x="${x - 3 * scale}" y="${y - h * 0.4}" width="${6 * scale}" height="${h * 0.4}" fill="${colB}"/><circle cx="${x}" cy="${y - h * 0.62}" r="${h * 0.42}" fill="${colA}"/><circle cx="${x - h * 0.22}" cy="${y - h * 0.45}" r="${h * 0.3}" fill="${colA}"/><circle cx="${x + h * 0.24}" cy="${y - h * 0.48}" r="${h * 0.3}" fill="${colA}"/>`;
+  }
+  return s;
+}
+const MOMENTS = [
+  { h: 8, kind: 'done', label: 'Morning tablet' },
+  { h: 9, kind: 'done', label: 'Breakfast' },
+  { h: 9.67, kind: 'talk', label: 'Her roses', mood: 'happy' },
+  { h: 10.25, kind: 'talk', label: 'When is Rohan coming?', mood: 'calm' },
+  { h: 11.5, kind: 'talk', label: 'A story about a crow', mood: 'happy' },
+  { h: 13, kind: 'next', label: 'Lunch' },
+  { h: 16, kind: 'later', label: 'Rohan calls' },
+  { h: 18.33, kind: 'talk-night', label: 'The rain', mood: 'calm' },
+  { h: 19, kind: 'later', label: 'Evening tablet' },
+];
+function scene(night) {
+  const sky = night ? ['#0A0F27', '#1B2550', '#3A3460'] : ['#BFE0F2', '#E3F1EE', '#FFF1D6'];
+  const now = night ? 20.25 : 13.08, nx = xAt(now);
+  let s = `<defs><linearGradient id="sky${+night}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset=".6" stop-color="${sky[1]}"/><stop offset="1" stop-color="${sky[2]}"/></linearGradient>
+    <radialGradient id="lamp${+night}"><stop offset="0" stop-color="#FFE7A8" stop-opacity="1"/><stop offset=".35" stop-color="#FFC45A" stop-opacity=".55"/><stop offset="1" stop-color="#FFC45A" stop-opacity="0"/></radialGradient>
+    <radialGradient id="fly${+night}"><stop offset="0" stop-color="#E9FFF2"/><stop offset=".4" stop-color="#8FE3B5" stop-opacity=".6"/><stop offset="1" stop-color="#8FE3B5" stop-opacity="0"/></radialGradient></defs>
+    <rect width="${W}" height="${H}" fill="url(#sky${+night})"/>`;
+  s += night ? `<circle cx="${W - 150}" cy="70" r="26" fill="#FFF6E2"/><circle cx="${W - 150}" cy="70" r="70" fill="#FFF0C8" opacity=".12"/>` + Array.from({ length: 50 }, (_, i) => `<circle cx="${(i * 223) % W}" cy="${10 + ((i * 71) % 150)}" r="${0.8 + (i % 3) * 0.5}" fill="#fff" opacity="${0.3 + (i % 4) / 6}"/>`).join('')
+    : `<circle cx="${W - 150}" cy="74" r="40" fill="#FFE29A"/><circle cx="${W - 150}" cy="74" r="110" fill="#FFE29A" opacity=".22"/>`;
+  s += `<path d="M0 230 C200 190 380 222 590 200 C800 178 980 214 ${W} 190 L${W} ${H} L0 ${H}Z" fill="${night ? '#16264A' : '#CFE6D9'}"/>`;
+  s += treesRow(night, 236, 0.8, 1, night ? '#1D3358' : '#B6D9C4', night ? '#162A4A' : '#9CCAB0');
+  s += `<path d="M0 262 C240 236 420 272 640 250 C860 230 1000 262 ${W} 244 L${W} ${H} L0 ${H}Z" fill="${night ? '#10203A' : '#A9D2B6'}"/>`;
+  s += treesRow(night, 270, 1.05, 4, night ? '#173055' : '#8FC3A2', night ? '#0F2440' : '#7AB28F');
+  s += `<rect y="${H - 120}" width="${W}" height="120" fill="${night ? '#0E1D30' : '#BFE0C6'}"/>`;
+  // the path: a soft sandy track; the part already walked glows warm
+  s += `<path d="${pathD()}" stroke="${night ? '#2A3A5C' : '#EFE3C4'}" stroke-width="26" fill="none" stroke-linecap="round"/>`;
+  s += `<clipPath id="walked${+night}"><rect x="0" y="0" width="${nx}" height="${H}"/></clipPath>`;
+  s += `<path d="${pathD()}" stroke="${night ? '#5B4B2E' : '#F6D795'}" stroke-width="10" fill="none" stroke-linecap="round" clip-path="url(#walked${+night})" opacity=".9"/>`;
+  // hour marks
+  for (const [h, t] of [[8, '8 am'], [12, '12 pm'], [16, '4 pm'], [20, '8 pm']]) s += `<text x="${xAt(h)}" y="${H - 16}" text-anchor="middle" font-size="12.5" fill="${night ? '#8F97B0' : '#5A6580'}" font-family="Geist">${t}</text>`;
+  let talkN = 0;
+  for (const m of MOMENTS) {
+    if (!night && m.kind === 'talk-night') continue;
+    const x = xAt(m.h), y = yAt(x), past = m.h <= now;
+    if (m.kind.startsWith('talk')) { // a firefly hovering over the path: a conversation
+      s += `<circle cx="${x}" cy="${y - 54}" r="22" fill="url(#fly${+night})"/><circle cx="${x}" cy="${y - 54}" r="5" fill="#fff"/><line x1="${x}" y1="${y - 46}" x2="${x}" y2="${y - 12}" stroke="${night ? '#8FE3B566' : '#2F7A5E55'}" stroke-dasharray="2 4"/>`;
+      const ly = y - 84 - (talkN++ % 2) * 26;
+      s += `<text x="${x}" y="${ly}" text-anchor="middle" font-size="13" font-weight="500" fill="${night ? '#DDF7E8' : '#2F7A5E'}" font-family="Geist">${m.label}</text>`;
+    } else { // a lantern on a post: a routine moment; lit once it is done
+      const lit = past || night;
+      s += `<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 34}" stroke="${night ? '#6B5A3E' : '#8B6B45'}" stroke-width="3"/>`;
+      if (lit) s += `<circle cx="${x}" cy="${y - 42}" r="26" fill="url(#lamp${+night})"/>`;
+      s += `<rect x="${x - 8}" y="${y - 52}" width="16" height="20" rx="5" fill="${lit ? '#FFD06A' : (night ? '#2B3656' : '#fff')}" stroke="${night ? '#6B5A3E' : '#8B6B45'}" stroke-width="2"/>`;
+      s += `<text x="${x}" y="${y + 30}" text-anchor="middle" font-size="12.5" fill="${night ? '#C9CEDD' : '#4A556E'}" font-family="Geist">${m.label}${m.kind === 'next' && !night ? ' · next' : ''}</text>`;
+    }
+  }
+  s += kodiSvg(nx, yAt(nx) + 6, 86, night);
+  return s;
+}
+function portal(night) {
+  const tipM = MOMENTS[4], tx = (xAt(tipM.h) / W) * 100;
+  return `<div class="portal ${night ? 'night' : 'day'}">
+    <div class="p-dock"><div class="brand">${leaf}Remi</div><nav><span class="on">Today</span><span>People</span><span>Routine</span><span>Hard questions</span><span>Tablet</span><span>Profile</span></nav><div class="me">P</div></div>
+    <div class="path-hero"><svg class="scene" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${scene(night)}</svg>
+      <div class="head"><div class="date">Tuesday, 22 October · ${night ? '8:15 pm' : '1:05 pm'}</div><h2>${night ? "Avni's day, all of it" : "Avni's day so far"}</h2>
+        <span class="weather">${night ? '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M15 3a8 8 0 1 0 6 13A7 7 0 0 1 15 3Z" fill="#FFE1A8"/></svg>A calm, happy day' : '<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#F5B547"/><g stroke="#F5B547" stroke-width="2" stroke-linecap="round"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg>Sunny mood so far'}</span></div>
+      <div class="legend"><span><i style="background:#FFD06A"></i>Routine done</span><span><i style="background:#8FE3B5"></i>A conversation</span><span><i style="background:#fff;border:1px solid #8B6B45"></i>Still to come</span></div>
+      <div class="tip" style="left:calc(${tx}% - 28px); top:52px"><time>11:30 am · happy</time>Remi told her a story about a clever crow. She laughed and asked for another.</div>
+    </div>
+    <div class="p-grid">
+      <div class="card letter"><div class="from"><h3>${night ? "Tonight's note" : "Last night's note"}</h3><span class="hint">${night ? 'Written at 8 pm' : 'Tonight\'s arrives at 8 pm'}</span></div>
+        <div class="dear hand">Dear Priya,</div>
+        <p>${night ? 'Your mum had a calm, happy day. She told me her roses are blooming, laughed at my story about a clever crow, and listened to the rain this evening. She asked twice when Rohan is coming, so I reminded her it’s Sunday. Both tablets taken on time.' : 'A quiet, content day. Your mum talked about cooking rajma and asked about her sister twice; I offered to let you know, and she was happy with that. Both tablets taken on time.'}</p>
+        <div class="sign hand">${leaf} Remi</div>
+        <div class="seal"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 21c0-5 0-8 2-11" stroke="#FFF7E2" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M14 10c3-4 7-3 8-2-2 3-5 4-8 2Z" fill="#FFF7E2"/><path d="M12.6 12C9.5 8.5 5 9.3 4 10.4c2.3 2.8 6 3.4 8.6 1.6Z" fill="#FFF7E2"/></svg></div>
+      </div>
+      <div class="side">
+        <div class="card"><h3>Her week, as weather</h3><span class="hint">How she seemed each day</span><div class="week">
+          ${['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Today'].map((d, i) => `<div class="${i === 6 ? 'today' : ''}">${i === 3 ? '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 18Z" fill="#B9C3D6"/></svg>' : i === 1 ? '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="9" cy="9" r="4" fill="#F5B547"/><path d="M8 19h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.3A2.9 2.9 0 0 0 8 19Z" fill="#C9D2E2"/></svg>' : '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#F5B547"/><g stroke="#F5B547" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2"/></g></svg>'}${d}</div>`).join('')}
+        </div></div>
+        <div class="card"><h3>Today in numbers</h3><div class="jars">
+          <div class="jar"><svg width="40" height="48" viewBox="0 0 40 48"><rect x="8" y="2" width="24" height="6" rx="2" fill="#8B6B45"/><rect x="4" y="8" width="32" height="38" rx="10" fill="${night ? '#ffffff10' : '#EAF5EE'}" stroke="${night ? '#ffffff30' : '#9CCAB0'}"/>${[[14, 20], [26, 26], [18, 34], [28, 38], [12, 40], [22, 16]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="#FFD06A"/>`).join('')}</svg><div><b>${night ? 11 : 6}</b><span>chats</span></div></div>
+          <div class="jar"><svg width="40" height="48" viewBox="0 0 40 48"><rect x="8" y="2" width="24" height="6" rx="2" fill="#8B6B45"/><rect x="4" y="8" width="32" height="38" rx="10" fill="${night ? '#ffffff10' : '#EAF5EE'}" stroke="${night ? '#ffffff30' : '#9CCAB0'}"/>${[[14, 22], [26, 30], [18, 38], [27, 18]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="3.5" fill="${i < (night ? 4 : 3) ? '#FFD06A' : (night ? '#ffffff30' : '#C9D9CF')}"/>`).join('')}</svg><div><b>${night ? '4 of 4' : '3 of 4'}</b><span>routine done</span></div></div>
+        </div><div class="calm"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>No alerts today, all calm</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+document.getElementById('portal-day').innerHTML = portal(false);
+document.getElementById('portal-night').innerHTML = portal(true);
+
+// ---- D: "My day" as stepping stones ----
+(function stones() {
+  const host = document.getElementById('stones'), Wt = 600, Ht = 450;
+  const items = [{ t: '8:00', l: 'Morning tablet', s: 'done' }, { t: '9:00', l: 'Breakfast', s: 'done' }, { t: '1:00', l: 'Lunch — now', s: 'now' }, { t: '4:00', l: 'Rohan calls', s: 'later' }, { t: '7:00', l: 'Evening tablet', s: 'later' }];
+  const pts = items.map((_, i) => [70 + (i % 2) * 70 + Math.sin(i * 1.3) * 20, 110 + i * 72]);
+  let svg = `<svg viewBox="0 0 ${Wt} ${Ht}" preserveAspectRatio="none"><path d="M${pts.map((p) => p.join(' ')).join(' L')}" stroke="#E9DFC4" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  items.forEach((it, i) => {
+    const [x, y] = pts[i];
+    if (it.s === 'now') svg += `<circle cx="${x}" cy="${y}" r="38" fill="#FFD06A" opacity=".3"/>`;
+    svg += `<ellipse cx="${x}" cy="${y}" rx="28" ry="24" fill="${it.s === 'done' ? '#DDF1E6' : it.s === 'now' ? '#F5B547' : '#fff'}" stroke="${it.s === 'later' ? '#16203B33' : 'none'}" stroke-width="2.5"/>`;
+    if (it.s === 'done') svg += `<path d="M${x - 9} ${y + 1}l6 6 12-13" stroke="#2F7A5E" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if (it.s === 'now') svg += `<circle cx="${x}" cy="${y}" r="7" fill="#fff"/>`;
+  });
+  svg += kodiSvg(pts[2][0] + 70, pts[2][1] + 30, 62, false) + '</svg>';
+  host.innerHTML = '<span class="t-back">‹ Back</span><div class="t-title"><b>Tuesday</b><span>22 October · afternoon</span></div>' + svg
+    + items.map((it, i) => `<div class="stone-label ${it.s}" style="left:${((pts[i][0] + (i === 2 ? 120 : 46)) / Wt) * 100}%; top:${((pts[i][1] - 22) / Ht) * 100}%"><time>${it.t}</time>${it.l}</div>`).join('');
+})();
+</script>
+</body>
+</html>
