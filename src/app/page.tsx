@@ -80,6 +80,12 @@ export default function Landing() {
           Runs on NVIDIA Nemotron open models through Nebius Token Factory. Face photos stay in the family’s own private
           storage and are never sent to an AI model. Remi never gives medical advice and never pretends to be a family member.
         </p>
+        <p className="mt-4">
+          Site by{' '}
+          <a href="https://www.adxstudiosin.com/" target="_blank" rel="noopener" className="underline">
+            ADX Studios
+          </a>
+        </p>
       </footer>
     </main>
   );
