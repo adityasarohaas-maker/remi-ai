@@ -42,7 +42,8 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
 
   const api: Api = useCallback((path, init) => fetch(`/api/patient/${path}`, {
     ...init,
-    headers: { 'content-type': 'application/json', 'x-device-token': token, ...(init?.headers ?? {}) },
+    // a FormData body sets its own multipart content-type
+    headers: { ...(init?.body instanceof FormData ? {} : { 'content-type': 'application/json' }), 'x-device-token': token, ...(init?.headers ?? {}) },
   }), [token]);
 
   const refresh = useCallback(async () => {
@@ -82,7 +83,7 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
     setScreen(s);
   }, []);
 
-  const remi = useRemi({ api, language, preferredName, people, markDone, go, cloudVoice });
+  const remi = useRemi({ api, language, preferredName, people, markDone, go, cloudVoice, recordVoice: today?.recordVoice ?? true });
 
   const due = today?.items.find((i) => i.state === 'due');
   useEffect(() => {

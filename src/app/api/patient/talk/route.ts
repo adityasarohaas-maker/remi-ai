@@ -5,11 +5,12 @@ import { cloudVoiceConfigured, synthesize, VOICE_PER_MIN } from '@/lib/azure-tts
 import { handleTalk, type TalkMode } from '@/core/talk';
 import { createSpokenReply } from '@/core/stream-speech';
 import { isSupportedLanguage, voiceLocale } from '@/core/voices';
+import { isUuid } from '@/core/recording';
 
 export async function POST(req: Request) {
   const householdId = await requireDevice(req);
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { text?: unknown; mode?: unknown; language?: unknown; voice?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { text?: unknown; mode?: unknown; language?: unknown; voice?: unknown; recordingId?: unknown } | null;
   const clientKey = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || undefined;
   const input = {
     householdId,
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
     mode: (body?.mode === 'overheard' || body?.mode === 'followup' ? body.mode : 'addressed') as TalkMode,
     clientKey,
     language: typeof body?.language === 'string' ? body.language : undefined, // checked in handleTalk
+    recordingId: isUuid(body?.recordingId) ? body.recordingId : undefined,
   };
 
   if (!req.headers.get('accept')?.includes('application/x-ndjson')) {

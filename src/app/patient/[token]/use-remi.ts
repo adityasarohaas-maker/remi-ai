@@ -9,6 +9,8 @@ import { kodiFeeling, type KodiCue, type KodiEmotion, type KodiEvent, type KodiG
 import { labelsFor } from './labels';
 import type { Api } from './patient-app';
 
+import { createRecorder, type Recorder } from './recorder';
+
 export type RemiStatus = 'off' | 'listening' | 'hearing' | 'thinking' | 'speaking' | 'blocked' | 'unsupported';
 export type RemiPerson = { name: string; relation: string; isDeceased: boolean };
 export type Turn = { you: string; remi: string };
@@ -33,6 +35,8 @@ export function useRemi(o: {
   markDone: (id: string) => Promise<void>; go: (s: Screen, opts?: { autoLook?: boolean }) => void;
   /** The server has a natural cloud voice (Azure); otherwise Remi uses the browser's own voice. */
   cloudVoice?: boolean;
+  /** She agreed to Remi keeping her voice (the default); false stops the tablet recording her. */
+  recordVoice?: boolean;
 }) {
   const t = labelsFor(o.language);
   const [status, setStatus] = useState<RemiStatus>('off');
@@ -66,6 +70,8 @@ export function useRemi(o: {
   const bargeIn = useRef(true);
   const echo = useRef<string[]>([]);
   const talkAbort = useRef<AbortController | null>(null);
+  // Her voice: recorded while she speaks, uploaded once Remi has answered. Never for speech Remi ignored.
+  const recorder = useRef<Recorder | null>(null);
   const asking = useRef('');          // what she asked for the reply in progress
   const lastSpokeAt = useRef(0);
   const lastWarm = useRef(0);
@@ -137,8 +143,22 @@ export function useRemi(o: {
   }, [speakNow, fetchVoice]);
   const say = useCallback((text: string) => enqueue(text, true), [enqueue]);
 
+  /** Uploads the clip of a turn Remi answered. Quietly: a lost clip is never a lost conversation. */
+  const keepClip = useCallback(async (id: string, clip: Promise<Blob | null>, transcript: string) => {
+    try {
+      const audio = await clip;
+      if (!audio) return;
+      const form = new FormData();
+      form.set('id', id);
+      form.set('audio', audio, 'turn.webm');
+      form.set('transcript', transcript);
+      form.set('language', latest.current.language);
+      await latest.current.api('recording', { method: 'POST', body: form });
+    } catch { /* offline, or no microphone: talk carries on */ }
+  }, []);
+
   /** Sends her words; speaks Remi's reply sentence by sentence as it streams in. Returns what Remi said. */
-  const converse = useCallback(async (text: string, mode: 'addressed' | 'followup' | 'overheard'): Promise<{ text: string; mood?: string }> => {
+  const converse = useCallback(async (text: string, mode: 'addressed' | 'followup' | 'overheard', recordingId?: string): Promise<{ text: string; mood?: string }> => {
     // With the cloud voice, the server voices the reply as it writes it and sends words and audio together.
     const voice = latest.current.cloudVoice && !!player.current;
     // she can cut in at any moment: interrupt() aborts this reply, and what Remi already said stands
@@ -158,7 +178,7 @@ export function useRemi(o: {
       const res = await latest.current.api('talk', {
         method: 'POST',
         headers: { accept: 'application/x-ndjson' },
-        body: JSON.stringify({ text, mode, language: latest.current.language, voice }),
+        body: JSON.stringify({ text, mode, language: latest.current.language, voice, recordingId }),
         signal,
       });
       freshCaption.current = true;
@@ -280,14 +300,19 @@ export function useRemi(o: {
     if (busy.current && !detectSafetyWords(raw).length) { note(raw, 'dropped: still answering'); return; }
     busy.current = true;
     asking.current = h.text;
+    // the clip of what she just said; named now so the turn and the clip share an id
+    const clip = recorder.current?.stop() ?? Promise.resolve(null);
+    clip.catch(() => {});
+    const recordingId = h.kind !== 'overheard' && latest.current.recordVoice !== false && typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : undefined;
     const previous = { you: heard, remi: reply };
     // a reply to Remi gets the same instant 'thinking' as its name does: she sees she was heard
     if (h.kind !== 'overheard') { setHeard(h.text); setReply(''); setStatus('thinking'); }
     const startTurn = turn.current;
     try {
-      const result = await converse(h.text, h.kind);
+      const result = await converse(h.text, h.kind, recordingId);
       if (turn.current !== startTurn) { note(h.text, 'interrupted'); return; } // she cut in; her new words get the answer
       const answer = result.text;
+      if (answer && recordingId) void keepClip(recordingId, clip, h.text);
       note(h.text, answer ? `replied (${h.kind})` : `stayed quiet (${h.kind})`);
       if (answer) {
         feel({ mood: result.mood, reply: answer });
@@ -305,7 +330,7 @@ export function useRemi(o: {
       busy.current = false;
       if (!speaking.current) idle();
     }
-  }, [say, converse, idle, t, heard, reply, feel, gesture, note, fromHer, interrupt]);
+  }, [say, converse, idle, t, heard, reply, feel, gesture, note, fromHer, interrupt, keepClip]);
 
   const handleRef = useRef(handle);
   useEffect(() => { handleRef.current = handle; }, [handle]);
@@ -326,6 +351,10 @@ export function useRemi(o: {
           lastWarm.current = Date.now();
           latest.current.api('talk', { method: 'GET' }).catch(() => {});
           if (latest.current.cloudVoice) latest.current.api('voice', { method: 'GET' }).catch(() => {});
+        }
+        if (latest.current.recordVoice !== false) {
+          recorder.current ??= createRecorder();
+          void recorder.current.start();
         }
         setLive(text);
         beat('hear');

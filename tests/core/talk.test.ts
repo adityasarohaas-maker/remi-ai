@@ -322,3 +322,16 @@ describe('handleTalk', () => {
     });
   });
 });
+
+describe('handleTalk recordings', () => {
+  it('keeps the id of the clip the tablet recorded with the turn', async () => {
+    const { deps, logged } = makeDeps();
+    await handleTalk(deps, { householdId: 'h1', text: 'My school was by the lake.', recordingId: '0b2d3b1e-4c7a-4d2a-9c1f-7f1e2a3b4c5d' });
+    expect(logged[0].payload).toMatchObject({ recordingId: '0b2d3b1e-4c7a-4d2a-9c1f-7f1e2a3b4c5d' });
+  });
+  it('records no clip id when the tablet sent none', async () => {
+    const { deps, logged } = makeDeps();
+    await handleTalk(deps, { householdId: 'h1', text: 'Hello Remi' });
+    expect(logged[0].payload).toMatchObject({ recordingId: null });
+  });
+});

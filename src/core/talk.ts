@@ -44,6 +44,8 @@ export async function handleTalk(deps: CoreDeps, input: {
   onDelta?: (text: string) => void;
   /** The language picked on the tablet; the family's profile language when absent or unsupported. */
   language?: string;
+  /** The clip of her words for this turn, named by the tablet before it uploads it. */
+  recordingId?: string;
 }) {
   const text = input.text.trim().slice(0, MAX_INPUT);
   if (!text) return { status: 400, body: { error: 'empty' } };
@@ -140,6 +142,6 @@ export async function handleTalk(deps: CoreDeps, input: {
 
   await Promise.allSettled(alerts);
   if (reply === null) return { ...silent, body: { reply: null, alerted: alerts.length > 0 } };
-  await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed', toldFamily });
+  await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed', toldFamily, recordingId: input.recordingId ?? null });
   return { status: 200, body: { reply, mood, alerted: safety.length > 0 || alerts.length > 0 } };
 }
