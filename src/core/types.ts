@@ -11,3 +11,31 @@ export interface HouseholdContext {
   household: Household; people: Person[]; routine: RoutineItem[];
   doneIds: string[]; guidance: Guidance[];
 }
+
+// --- keeping a life ---
+export const LIFE_STAGES = ['childhood', 'youth', 'marriage', 'work', 'parenthood', 'later', 'other', 'wishes'] as const;
+export type LifeStage = (typeof LIFE_STAGES)[number];
+export const VISIBILITIES = ['everyone', 'members', 'after_death', 'on_date', 'on_event', 'remi_only'] as const;
+export type Visibility = (typeof VISIBILITIES)[number];
+export type MemoryKind = 'story' | 'lesson' | 'recipe' | 'wish' | 'letter';
+export type CareType = 'elderly' | 'dementia' | 'terminal';
+export type HouseholdStatus = 'living' | 'passed';
+
+/** The fields that decide who may see a memory, and when. */
+export interface MemoryRule {
+  visibility: Visibility;
+  visibleTo: string[];
+  openOn: string | null;      // YYYY-MM-DD
+  openEventId: string | null;
+}
+
+export interface Memory extends MemoryRule {
+  id: string; householdId: string;
+  title: string; summary: string; quote: string; language: string; translation: string | null;
+  recordingId: string | null; clipStartMs: number | null; clipEndMs: number | null;
+  lifeStage: LifeStage; yearFrom: number | null; yearTo: number | null;
+  people: string[]; places: string[]; kind: MemoryKind;
+  confidence: 'sure' | 'unsure'; verifiedBy: string | null;
+  recipientName: string | null; recipientEmail: string | null; openedAt: string | null;
+  questionId: string | null; photoId: string | null; createdAt: string;
+}
