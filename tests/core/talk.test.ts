@@ -383,10 +383,7 @@ describe('handleTalk and her consent', () => {
 describe('handleTalk care signals', () => {
   it('notes pain for the family and asks Remi to follow up gently', async () => {
     const signals: string[] = [];
-    const { deps, alerts, chat } = makeDeps({
-      chat: async () => 'Oh dear, where does it hurt?\nMOOD: calm',
-      logCareSignal: async (_h, kind) => { signals.push(kind); },
-    });
+    const { deps, alerts, chat } = makeDeps({ logCareSignal: async (_h, kind) => { signals.push(kind); } });
     await handleTalk(deps, { householdId: 'h1', text: 'My knee is sore and stiff today.' });
     expect(signals).toEqual(['pain']);
     expect(alerts.some((a) => a.reason === 'care')).toBe(true);
