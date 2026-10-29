@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/memories",
       "schedule": "30 21 * * *"
+    },
+    {
+      "path": "/api/cron/open-letters",
+      "schedule": "30 3 * * *"
     }
   ]
 }

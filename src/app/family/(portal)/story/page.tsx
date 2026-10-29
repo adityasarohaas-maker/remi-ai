@@ -2,6 +2,10 @@ import { requireFamily } from '@/lib/household';
 import { groupIntoChapters } from '@/core/chapters';
 import { memoryFromRow, MEMORY_COLUMNS, type MemoryDbRow } from '@/core/memory-row';
 import { MemoryCard } from './memory-card';
+import { ComingLater, type SealedItem } from './events';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { canAdmin } from '@/core/roles';
+import type { Visibility } from '@/core/types';
 
 const SEALED_LABEL: Record<string, string> = {
   members: 'for particular family members',
@@ -11,12 +15,24 @@ const SEALED_LABEL: Record<string, string> = {
 };
 
 export default async function StoryPage() {
-  const { sb, householdId } = await requireFamily();
-  const [{ data: h }, { data: rows }, { data: sealed }] = await Promise.all([
+  const { sb, householdId, role } = await requireFamily();
+  const [{ data: h }, { data: rows }, { data: sealed }, { data: members }, { data: events }, { data: sealedRows }, { data: links }] = await Promise.all([
     sb.from('households').select('preferred_name').eq('id', householdId).single(),
     sb.from('memories').select(MEMORY_COLUMNS).eq('household_id', householdId).order('created_at'),
     sb.rpc('count_sealed', { p_household: householdId }),
+    sb.from('household_members').select('user_id, display_name').eq('household_id', householdId),
+    sb.from('life_events').select('id, name, happened_on').eq('household_id', householdId).order('created_at'),
+    // the rules of sealed memories, never their words: the service role reads only the columns that say who and when
+    supabaseAdmin().from('memories').select('id, kind, title, visibility, visible_to, open_on, open_event_id, opened_at, recipient_name, recipient_email')
+      .eq('household_id', householdId).in('visibility', ['members', 'after_death', 'on_date', 'on_event']).order('created_at'),
+    canAdmin(role) ? sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'letter_link').order('created_at', { ascending: false }).limit(5) : Promise.resolve({ data: [] as { payload: unknown; created_at: string }[] }),
   ]);
+  const names = Object.fromEntries((members ?? []).map((m) => [m.user_id as string, (m.display_name as string | null) ?? 'a family member']));
+  const visibleIds = new Set(((rows ?? []) as MemoryDbRow[]).map((r) => r.id));
+  const sealedItems: SealedItem[] = ((sealedRows ?? []) as { id: string; kind: string; title: string; visibility: Visibility; visible_to: string[]; open_on: string | null; open_event_id: string | null; opened_at: string | null; recipient_name: string | null; recipient_email: string | null }[])
+    .filter((r) => !visibleIds.has(r.id) || r.recipient_name)
+    .map((r) => ({ id: r.id, kind: r.kind, title: visibleIds.has(r.id) ? r.title : null, visibility: r.visibility, visibleTo: r.visible_to ?? [], openOn: r.open_on, openEventId: r.open_event_id, openedAt: r.opened_at, recipientName: r.recipient_name, recipientEmail: r.recipient_email }));
+  const recentLinks = ((links ?? []) as { payload: { link?: string; memoryId?: string }; created_at: string }[]).filter((l) => l.payload?.link);
   const name = h?.preferred_name ?? '';
   const chapters = groupIntoChapters(((rows ?? []) as MemoryDbRow[]).map(memoryFromRow));
   const sealedList = ((sealed ?? []) as { visibility: string; n: number }[]).filter((s) => s.n > 0);
@@ -32,6 +48,10 @@ export default async function StoryPage() {
         </p>
       )}
       {chapters.length === 0 && <p className="mt-8 text-stone-600">Nothing kept yet. Stories appear here after she talks with Remi.</p>}
+      {recentLinks.length > 0 && (
+        <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm">Letter links to send yourself: {recentLinks.map((l, i) => <code key={i} className="ml-2 break-all">{l.payload.link}</code>)}</p>
+      )}
+      <ComingLater sealed={sealedItems} events={(events ?? []) as { id: string; name: string; happened_on: string | null }[]} names={names} admin={canAdmin(role)} name={name} />
       {chapters.map((c) => (
         <section key={c.stage} className="mt-10">
           <h2 className="text-xl font-semibold">{c.title}</h2>
