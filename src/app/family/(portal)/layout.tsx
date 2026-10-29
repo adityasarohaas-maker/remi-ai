@@ -8,14 +8,25 @@ const NAV = [
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { sb, householdId } = await requireFamily();
-  const { data: h } = await sb.from('households').select('preferred_name').eq('id', householdId).single();
+  const [{ data: h }, { data: consent }] = await Promise.all([
+    sb.from('households').select('preferred_name, status, passed_on').eq('id', householdId).single(),
+    sb.from('consents').select('allow_persona').eq('household_id', householdId).maybeSingle(),
+  ]);
+  const passed = h?.status === 'passed';
+  const name = h?.preferred_name ?? '';
+  // after she has passed, the portal is a place to remember her
+  const nav: readonly (readonly [string, string])[] = passed
+    ? [['/family/remember', 'Remember'], ['/family/ask', 'Ask'], ['/family/story', 'Story'], ['/family/letters', 'Letters'],
+       ...(consent?.allow_persona ? [[`/family/talk-with`, `Talk with ${name}`] as const] : []),
+       ['/family/book', 'Book'], ['/family/export', 'Keep everything'], ['/family/members', 'Members'], ['/family/profile', 'Profile']]
+    : NAV;
   return (
     <div className="min-h-dvh bg-stone-50 text-stone-900">
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-          <span className="font-semibold">Remi AI · {h?.preferred_name}</span>
+          <span className="font-semibold">{passed ? `In memory of ${name}${h?.passed_on ? ` · ${h.passed_on}` : ''}` : `Remi AI · ${name}`}</span>
           <nav className="flex flex-wrap gap-4 text-sm">
-            {NAV.map(([href, label]) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
+            {nav.map(([href, label]) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
           </nav>
         </div>
       </header>

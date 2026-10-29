@@ -13,13 +13,16 @@ import { Home } from './screens/home';
 import { Talk } from './screens/talk';
 import { Face } from './screens/face';
 import { Photo } from './screens/photo';
+import { Stories } from './screens/stories';
 import { Today, type TodayData } from './screens/today';
 
 export type Api = (path: string, init?: RequestInit) => Promise<Response>;
-type Screen = 'home' | 'talk' | 'face' | 'today' | 'photo';
+type Screen = 'home' | 'talk' | 'face' | 'today' | 'photo' | 'stories';
 
-export function PatientApp({ token, preferredName, language: homeLanguage, people, theme, debug = false, cloudVoice = false }: {
+export function PatientApp({ token, preferredName, language: homeLanguage, people, theme, debug = false, cloudVoice = false, passed = false }: {
   token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night'; debug?: boolean; cloudVoice?: boolean;
+  /** She has passed: the tablet keeps her stories for the family, and nothing else. */
+  passed?: boolean;
 }) {
   // The language can be changed on the tablet (the 🌐 button); the family's profile language is the start.
   const [language, setLanguage] = useState(homeLanguage);
@@ -117,7 +120,8 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
 
   return (
     <div className="tablet flex h-dvh min-h-[34rem] flex-col overflow-hidden" data-theme={night ? 'night' : 'day'} lang={language} dir={isRtl(language) ? 'rtl' : 'ltr'}>
-      {remi.status === 'off' && !skipped && (
+      {passed && <Stories api={api} language={language} preferredName={preferredName} passed />}
+      {!passed && remi.status === 'off' && !skipped && (
         <div className="tablet fixed inset-0 z-20 flex flex-col items-center justify-center gap-6 px-6 py-8 text-center" data-theme={night ? 'night' : 'day'}>
           <LanguagePicker language={language} onChange={changeLanguage} className="absolute end-4 top-4 sm:end-8 sm:top-6" />
           <Kodi className="min-h-0 w-full max-w-lg flex-1" state="listening" emotion="happy" cue={null} night={night} label={t.startRemi} onPress={remi.start} />
@@ -128,17 +132,18 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
           <button onClick={() => setSkipped(true)} className="rounded-xl px-2 text-xl text-ink/70 underline underline-offset-4">{t.notNow}</button>
         </div>
       )}
-      {due && (
+      {!passed && due && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-4 bg-marigold px-6 py-5 text-2xl text-[#2b2340] sm:px-10 sm:text-3xl">
           <span className="max-w-3xl">{due.spokenMessage ?? due.label}</span>
           <button onClick={() => tapDone(due.id)} className="min-h-16 rounded-2xl bg-[#2b2340] px-8 font-display font-bold text-white">{t.done}</button>
         </div>
       )}
       {remi.active && screen !== 'home' && <RemiStatusLine status={remi.status} language={language} className="px-6 pt-5 sm:px-12" />}
-      {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} kodi={kodi} onLanguage={changeLanguage} />}
-      {screen === 'talk' && <Talk api={api} language={language} back={() => go('home')} />}
-      {screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} onIdentified={onIdentified} />}
-      {screen === 'photo' && <Photo api={api} language={language} back={() => go('home')} say={say} onPhoto={onPhoto} />}
+      {!passed && screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} kodi={kodi} onLanguage={changeLanguage} />}
+      {!passed && screen === 'talk' && <Talk api={api} language={language} back={() => go('home')} />}
+      {!passed && screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} onIdentified={onIdentified} />}
+      {!passed && screen === 'photo' && <Photo api={api} language={language} back={() => go('home')} say={say} onPhoto={onPhoto} />}
+      {!passed && screen === 'stories' && <Stories api={api} language={language} back={() => go('home')} preferredName={preferredName} />}
       {debug && (
         <ol className="pointer-events-none fixed left-2 top-2 z-30 max-w-sm rounded-xl bg-black/75 p-2 font-mono text-[11px] leading-snug text-white">
           <li className="opacity-70">Remi debug · status: {remi.status}</li>

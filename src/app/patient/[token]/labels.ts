@@ -286,6 +286,14 @@ export const PHOTO_LABELS = {
   },
 };
 
+export const STORIES_LABELS = {
+  tile: 'My stories',
+  title: 'Your stories',
+  none: "No stories yet. Tell Remi about your life, and they'll be kept here in your own voice.",
+  inMemory: (name: string) => `${name}'s stories`,
+  passedHint: (name: string) => `In ${name}'s own voice. Tap one to listen.`,
+};
+
 export function labelsFor(language: string): Labels {
   return L[langKey(language)];
 }

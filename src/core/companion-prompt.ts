@@ -133,6 +133,9 @@ Follow the family's guidance closely. Do not say that anyone has died unless the
   if (i.story && !i.safety.length) sections.push(storySection(who));
   if (i.steer && !i.safety.length && !i.story && !i.sensitive) sections.push(steerSection(who, i.steer));
   sections.push(`When ${who} says who a story is for ("only for my daughter", "after I'm gone", "give this to Riya on her wedding day"), say back in one short sentence what you understood, so she can correct you.`);
+  if (i.careType === 'dementia') {
+    sections.push(`${who} lives with dementia. Never correct her memories; if a story changes between tellings, just listen. If she seems low or lost, you may offer: "Would you like to hear one of your own stories? Tap My stories."`);
+  }
   if (i.care?.length && !i.safety.length) {
     sections.push(`${who} may not be well (${i.care.join(', ')}). Respond to that first, warmly: one gentle follow-up question (where it hurts, since when, whether ${contact} knows), nothing medical, no advice. Do not bring up anything else this turn.`);
   }

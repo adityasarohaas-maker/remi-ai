@@ -4,6 +4,8 @@ import { LocaleFields } from '../../components/locale-fields';
 import { isDemoHousehold } from '@/core/demo';
 import { canAdmin } from '@/core/roles';
 import { CareContacts } from './care-contacts';
+import { PassedForm } from './passed';
+import { canUndoPassed } from '@/core/passed';
 
 const input = 'mt-1 w-full rounded-lg border px-4 py-3';
 
@@ -14,6 +16,10 @@ export default async function ProfilePage() {
     sb.from('care_contacts').select('id, name, email').eq('household_id', householdId).order('name'),
   ]);
   if (!h) return null;
+  const { count: openedSince } = h.status === 'passed'
+    ? await sb.from('memories').select('id', { count: 'exact', head: true }).eq('household_id', householdId).not('opened_at', 'is', null).gte('opened_at', h.passed_marked_at ?? '1970-01-01')
+    : { count: 0 };
+  const canUndo = canUndoPassed({ status: h.status, passed_marked_at: h.passed_marked_at, is_demo: h.is_demo }, (openedSince ?? 0) > 0, new Date());
   return (
     <>
     <section className="max-w-xl">
@@ -36,6 +42,7 @@ export default async function ProfilePage() {
       </form>
     </section>
     <CareContacts contacts={(contacts ?? []) as { id: string; name: string; email: string }[]} admin={canAdmin(role)} />
+    <PassedForm name={h.preferred_name} status={h.status} passedOn={h.passed_on} canUndo={canUndo} admin={canAdmin(role)} />
     </>
   );
 }
