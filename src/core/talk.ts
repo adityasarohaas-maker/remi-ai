@@ -49,6 +49,10 @@ export async function handleTalk(deps: CoreDeps, input: {
   language?: string;
   /** The clip of her words for this turn, named by the tablet before it uploads it. */
   recordingId?: string;
+  /** The old photo on screen while she spoke. */
+  photo?: { id: string; note: string | null };
+  /** Who Remi had just recognised (the photo, or the Who-is-this screen). */
+  personName?: string;
 }) {
   const text = input.text.trim().slice(0, MAX_INPUT);
   if (!text) return { status: 400, body: { error: 'empty' } };
@@ -99,7 +103,8 @@ export async function handleTalk(deps: CoreDeps, input: {
 
   const story = wantsStory(text) && !safety.length;
   // overheard chatter is never the moment to bring something up
-  const steer = overheard ? null : pickSteer({
+  // she is looking at a photo right now: that is what to talk about, whatever Remi raised earlier
+  const steer = input.photo ? { kind: 'photo' as const, id: input.photo.id, note: input.photo.note } : overheard ? null : pickSteer({
     careType: ctx.careType, pendingQuestions: ctx.pendingQuestions, unshownPhoto: ctx.unshownPhoto, storyCoverage: ctx.storyCoverage,
     minutesSinceLastSteer: ctx.lastSteerAt ? (now.getTime() - ctx.lastSteerAt.getTime()) / 60_000 : Infinity,
   });
@@ -159,6 +164,7 @@ export async function handleTalk(deps: CoreDeps, input: {
   if (reply === null) return { ...silent, body: { reply: null, alerted: alerts.length > 0 } };
   await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed', toldFamily, recordingId: input.recordingId ?? null,
     // what Remi brought up this turn, so it isn't brought up again too soon
-    steer: askedQuestion ? 'question' : steer && !fallback ? steer.kind : null, askedQuestion });
+    steer: askedQuestion ? 'question' : steer && !fallback ? steer.kind : null, askedQuestion,
+    photoId: input.photo?.id ?? null, personName: input.personName ?? null });
   return { status: 200, body: { reply, mood, alerted: safety.length > 0 || alerts.length > 0 } };
 }

@@ -351,3 +351,17 @@ describe('handleTalk steering', () => {
     expect(asked).toEqual(['q1']);
   });
 });
+
+describe('handleTalk on the photo screen', () => {
+  it('keeps which photo she was looking at, and who she was shown, with the turn', async () => {
+    const { deps, logged } = makeDeps();
+    await handleTalk(deps, { householdId: 'h1', text: 'That was our wedding.', photo: { id: 'ph1', note: 'Wedding, 1968' }, personName: 'Ramesh' });
+    expect(logged[0].payload).toMatchObject({ photoId: 'ph1', personName: 'Ramesh' });
+  });
+  it('tells Remi about the photo even if it steered a moment ago', async () => {
+    const { deps, chat } = makeDeps({ loadContext: async () => ({ ...ctx, lastSteerAt: new Date('2026-10-17T07:39:00Z') }) });
+    await handleTalk(deps, { householdId: 'h1', text: 'Look at this one.', photo: { id: 'ph1', note: 'Wedding, 1968' } });
+    const system = (chat.mock.calls[0][0] as unknown as { role: string; content: string }[])[0].content;
+    expect(system).toContain('Wedding, 1968');
+  });
+});

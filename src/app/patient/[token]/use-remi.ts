@@ -38,6 +38,8 @@ export function useRemi(o: {
   cloudVoice?: boolean;
   /** She agreed to Remi keeping her voice (the default); false stops the tablet recording her. */
   recordVoice?: boolean;
+  /** What is on screen as she talks: the photo she is looking at, the person Remi just recognised. */
+  turnContext?: { photoId: string | null; personName: string | null };
 }) {
   const t = labelsFor(o.language);
   const [status, setStatus] = useState<RemiStatus>('off');
@@ -181,7 +183,7 @@ export function useRemi(o: {
       const res = await latest.current.api('talk', {
         method: 'POST',
         headers: { accept: 'application/x-ndjson' },
-        body: JSON.stringify({ text, mode, language: latest.current.language, voice, recordingId }),
+        body: JSON.stringify({ text, mode, language: latest.current.language, voice, recordingId, photoId: latest.current.turnContext?.photoId ?? undefined, personName: latest.current.turnContext?.personName ?? undefined }),
         signal,
       });
       freshCaption.current = true;

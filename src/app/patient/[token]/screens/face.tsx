@@ -8,12 +8,14 @@ import type { Api } from '../patient-app';
 
 type Result = { name?: string; relation?: string; reply: string };
 
-export function Face({ api, language, back, say, autoLook = false }: {
+export function Face({ api, language, back, say, autoLook = false, onIdentified }: {
   api: Api; language: string; back: () => void;
   /** Remi's voice (pauses the listener); plain speech when hands-free is off. */
   say?: (text: string) => void;
   /** Opened by "Remi, who is this?": look as soon as the camera is on. */
   autoLook?: boolean;
+  /** Who was recognised, so what she says next is kept with that person. */
+  onIdentified?: (name: string | null) => void;
 }) {
   const talk = say ?? ((text: string) => speak(text, language));
   const t = labelsFor(language);
@@ -66,6 +68,7 @@ export function Face({ api, language, back, say, autoLook = false }: {
       const data = await res.json().catch(() => null);
       const r: Result = res.ok && data ? data : { reply: t.retry };
       setResult(r);
+      onIdentified?.(r.name ?? null);
       talk(r.reply);
     } catch {
       setResult({ reply: t.retry });

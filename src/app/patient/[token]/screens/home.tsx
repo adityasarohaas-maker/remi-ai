@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from 'react';
 import { speak } from '@/lib/speech';
 import type { KodiCue, KodiEmotion, KodiEvent } from '@/core/kodi';
-import { labelsFor } from '../labels';
+import { labelsFor, PHOTO_LABELS } from '../labels';
 import { RemiStatusLine } from '../remi-status';
 import { Kodi } from '../kodi/kodi';
 import { LanguagePicker } from '../language-picker';
@@ -10,7 +10,7 @@ import type { Api } from '../patient-app';
 import type { TodayData } from './today';
 import type { RemiStatus, Turn } from '../use-remi';
 
-type Go = (s: 'talk' | 'face' | 'today') => void;
+type Go = (s: 'talk' | 'face' | 'today' | 'photo') => void;
 
 export type RemiView = {
   active: boolean; status: RemiStatus; live: string; heard: string; reply: string; turns: Turn[];
@@ -27,6 +27,7 @@ const ICONS = {
   who: icon(<><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></>),
   day: icon(<><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" /></>),
   type: icon(<><rect x="2" y="6" width="20" height="13" rx="3" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 15h10" /></>),
+  photo: icon(<><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="2" /><path d="M21 16l-5-5-8 8" /></>),
 };
 
 /** A soft card after the reference design: icon tile, title, round arrow. */
@@ -119,7 +120,8 @@ export function Home({ api, preferredName, language, today, go, remi, kodi, onLa
       </section>
 
       <footer className="flex shrink-0 flex-col gap-2 pt-3 sm:flex-row sm:items-stretch sm:gap-4">
-        <nav className="grid flex-1 grid-cols-3 gap-2 sm:gap-4">
+        <nav className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+          <ActionCard onClick={() => go('photo')} label={PHOTO_LABELS.tile} glyph={ICONS.photo} />
           <ActionCard onClick={() => go('face')} label={t.who} glyph={ICONS.who} />
           <ActionCard onClick={() => go('today')} label={t.day} glyph={ICONS.day} />
           <ActionCard onClick={() => go('talk')} label={t.typeIt} glyph={ICONS.type} />

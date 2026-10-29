@@ -12,10 +12,11 @@ import { isSupportedLanguage } from '@/core/voices';
 import { Home } from './screens/home';
 import { Talk } from './screens/talk';
 import { Face } from './screens/face';
+import { Photo } from './screens/photo';
 import { Today, type TodayData } from './screens/today';
 
 export type Api = (path: string, init?: RequestInit) => Promise<Response>;
-type Screen = 'home' | 'talk' | 'face' | 'today';
+type Screen = 'home' | 'talk' | 'face' | 'today' | 'photo';
 
 export function PatientApp({ token, preferredName, language: homeLanguage, people, theme, debug = false, cloudVoice = false }: {
   token: string; preferredName: string; language: string; people: RemiPerson[]; theme?: 'day' | 'night'; debug?: boolean; cloudVoice?: boolean;
@@ -38,6 +39,10 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
   const [autoLook, setAutoLook] = useState(false);
   const [today, setToday] = useState<TodayData | null>(null);
   const [skipped, setSkipped] = useState(false);
+  // what she is looking at while she talks, so her words are kept with it
+  const [turnContext, setTurnContext] = useState<{ photoId: string | null; personName: string | null }>({ photoId: null, personName: null });
+  const onPhoto = useCallback((photo: { id: string } | null, personName: string | null) => setTurnContext({ photoId: photo?.id ?? null, personName }), []);
+  const onIdentified = useCallback((personName: string | null) => setTurnContext({ photoId: null, personName }), []);
   const announced = useRef(new Set<string>());
 
   const api: Api = useCallback((path, init) => fetch(`/api/patient/${path}`, {
@@ -83,7 +88,7 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
     setScreen(s);
   }, []);
 
-  const remi = useRemi({ api, language, preferredName, people, markDone, go, cloudVoice, recordVoice: today?.recordVoice ?? true });
+  const remi = useRemi({ api, language, preferredName, people, markDone, go, cloudVoice, recordVoice: today?.recordVoice ?? true, turnContext });
 
   const due = today?.items.find((i) => i.state === 'due');
   useEffect(() => {
@@ -132,7 +137,8 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
       {remi.active && screen !== 'home' && <RemiStatusLine status={remi.status} language={language} className="px-6 pt-5 sm:px-12" />}
       {screen === 'home' && <Home api={api} preferredName={preferredName} language={language} today={today} go={go} remi={remi} kodi={kodi} onLanguage={changeLanguage} />}
       {screen === 'talk' && <Talk api={api} language={language} back={() => go('home')} />}
-      {screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} />}
+      {screen === 'face' && <Face api={api} language={language} back={() => go('home')} say={say} autoLook={autoLook} onIdentified={onIdentified} />}
+      {screen === 'photo' && <Photo api={api} language={language} back={() => go('home')} say={say} onPhoto={onPhoto} />}
       {debug && (
         <ol className="pointer-events-none fixed left-2 top-2 z-30 max-w-sm rounded-xl bg-black/75 p-2 font-mono text-[11px] leading-snug text-white">
           <li className="opacity-70">Remi debug · status: {remi.status}</li>

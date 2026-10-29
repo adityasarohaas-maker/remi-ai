@@ -23,8 +23,9 @@ export default async function FamilyHome() {
   const { sb, householdId } = await requireFamily();
   const { data: h } = await sb.from('households').select('preferred_name, timezone').eq('id', householdId).single();
   const tz = safeTimeZone(h?.timezone);
-  const today = localParts(new Date(), tz).day;
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date();
+  const today = localParts(now, tz).day;
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const [{ data: alerts }, { data: digest }, { data: talk }, { data: fresh }] = await Promise.all([
     sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'alert').order('created_at', { ascending: false }).limit(10),
     sb.from('digests').select('summary, created_at').eq('household_id', householdId).eq('day', today).maybeSingle(),

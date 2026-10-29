@@ -7,10 +7,16 @@ import { createSpokenReply } from '@/core/stream-speech';
 import { isSupportedLanguage, voiceLocale } from '@/core/voices';
 import { isUuid } from '@/core/recording';
 
+async function photoOnScreen(householdId: string, id: string): Promise<{ id: string; note: string | null } | undefined> {
+  const { data } = await supabaseAdmin().from('photos').select('id, note, year').eq('id', id).eq('household_id', householdId).maybeSingle();
+  if (!data) return undefined;
+  return { id: data.id as string, note: [data.note, data.year].filter(Boolean).join(', ') || null };
+}
+
 export async function POST(req: Request) {
   const householdId = await requireDevice(req);
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { text?: unknown; mode?: unknown; language?: unknown; voice?: unknown; recordingId?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { text?: unknown; mode?: unknown; language?: unknown; voice?: unknown; recordingId?: unknown; photoId?: unknown; personName?: unknown } | null;
   const clientKey = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || undefined;
   const input = {
     householdId,
@@ -19,6 +25,8 @@ export async function POST(req: Request) {
     clientKey,
     language: typeof body?.language === 'string' ? body.language : undefined, // checked in handleTalk
     recordingId: isUuid(body?.recordingId) ? body.recordingId : undefined,
+    photo: isUuid(body?.photoId) ? await photoOnScreen(householdId, body.photoId) : undefined,
+    personName: typeof body?.personName === 'string' && body.personName.trim() ? body.personName.trim().slice(0, 80) : undefined,
   };
 
   if (!req.headers.get('accept')?.includes('application/x-ndjson')) {

@@ -274,6 +274,18 @@ const L: Record<LangKey, Labels> = {
   },
 };
 
+// The photo screen is English only for now (new strings aren't translated yet).
+export const PHOTO_LABELS = {
+  tile: 'Look at a photo',
+  another: 'Another photo',
+  none: 'No photos yet. Your family can add some from the portal.',
+  ask: (note: string | null, year: number | null, person: string | null) => {
+    const about = [note, year ? String(year) : null].filter(Boolean).join(', ');
+    const lead = about ? `Your family added this photo. ${about}.` : 'Your family added this photo.';
+    return person ? `${lead} Is that ${person}? Tell me about this day.` : `${lead} Tell me about this day.`;
+  },
+};
+
 export function labelsFor(language: string): Labels {
   return L[langKey(language)];
 }
