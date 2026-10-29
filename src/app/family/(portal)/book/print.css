@@ -1,0 +1,13 @@
+/* The memory book, A5, printed from the browser ("Save as PDF"). */
+@page { size: A5; margin: 16mm 14mm; }
+@media print {
+  header, nav, .no-print { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  body { background: white !important; }
+  .book { font-size: 11pt; }
+  .book-cover { page-break-after: always; display: flex; flex-direction: column; justify-content: center; min-height: 80vh; text-align: center; }
+  .book-chapter { page-break-before: always; }
+  .book-memory { page-break-inside: avoid; }
+}
+.book-quote { font-size: 1.15em; line-height: 1.55; }
+.book-memory + .book-memory { margin-top: 1.6rem; }
