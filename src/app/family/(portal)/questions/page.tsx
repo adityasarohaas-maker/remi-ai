@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { requireFamily } from '@/lib/household';
-import { askQuestion, deleteQuestion, QUESTION_MAX } from './actions';
+import { askQuestion, deleteQuestion } from './actions';
+
+const QUESTION_MAX = 300;
 
 const STATUS: Record<string, string> = { pending: 'Waiting for the right moment', asked: 'Remi has asked', answered: 'Answered' };
 

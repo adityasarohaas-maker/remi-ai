@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { requireFamily } from '@/lib/household';
 import { field } from '@/lib/form';
 
-export const PHOTO_MAX_BYTES = 8_000_000;
+const PHOTO_MAX_BYTES = 8_000_000;
 
 export async function addPhoto(form: FormData): Promise<void> {
   const { sb, householdId, user } = await requireFamily();

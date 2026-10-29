@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { requireFamily } from '@/lib/household';
+import { isDemoHousehold } from '@/core/demo';
+import { seeAfter, seeBefore } from '@/app/demo-actions';
 
 const NAV = [
   ['/family', 'Today'], ['/family/story', 'Story'], ['/family/ask', 'Ask'], ['/family/questions', 'Questions'], ['/family/photos', 'Photos'], ['/family/people', 'People'],
@@ -30,6 +32,14 @@ export default async function PortalLayout({ children }: { children: React.React
           </nav>
         </div>
       </header>
+      {isDemoHousehold(householdId) && (
+        <div className="bg-amber-50 text-sm">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-2">
+            <span>Demo family. {passed ? 'This is the portal after Avni has passed.' : 'This is the portal while Avni is here.'}</span>
+            <form action={passed ? seeBefore : seeAfter}><button className="rounded-lg border border-amber-400 px-3 py-1 hover:bg-amber-100">{passed ? 'Back to before' : 'See after'}</button></form>
+          </div>
+        </div>
+      )}
       <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
     </div>
   );

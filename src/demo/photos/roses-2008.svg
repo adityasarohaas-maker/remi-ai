@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d6d0"/><stop offset="1" stop-color="#7f4a52"/></linearGradient></defs>
+  <rect width="800" height="600" fill="url(#g)"/>
+  <rect x="24" y="24" width="752" height="552" fill="none" stroke="#fff1ee" stroke-width="6" opacity="0.7"/>
+  <g fill="#b23a48" opacity="0.6"><circle cx="220" cy="330" r="48"/><circle cx="330" cy="280" r="40"/><circle cx="450" cy="340" r="52"/><circle cx="570" cy="290" r="44"/><circle cx="660" cy="350" r="38"/></g>
+  <text x="400" y="80" font-family="Georgia, serif" font-size="30" fill="#fff6f4" text-anchor="middle" opacity="0.9">The rose garden, 2008</text>
+  <text x="400" y="560" font-family="Georgia, serif" font-size="22" fill="#fff6f4" text-anchor="middle" opacity="0.8">Shanti Nagar, the second year</text>
+</svg>

@@ -30,11 +30,11 @@ export default function Landing() {
         <div>
           <p className="text-xl font-semibold text-garden-deep">Remi AI</p>
           <h1 className="mt-6 max-w-[16ch] text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
-            The tenth time she asks, Remi answers like it’s the first.
+            Remi keeps a life: her voice, her stories, for the people who love her.
           </h1>
           <p className="mt-6 max-w-[52ch] text-xl leading-relaxed text-ink/80">
-            A calm tablet companion for people living with dementia — built around their own family, their own memories,
-            and the words their family chooses for the hardest moments.
+            A companion for someone in the last chapter of their life. Remi talks with them every day, keeps their stories
+            in their own voice, and lets the family ask about them — now, and after they are gone. Nothing is ever invented.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             {tabletToken && (

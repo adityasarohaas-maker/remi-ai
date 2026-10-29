@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { requireFamily } from '@/lib/household';
 import { field } from '@/lib/form';
 
-export const QUESTION_MAX = 300;
+const QUESTION_MAX = 300;
 
 export async function askQuestion(form: FormData) {
   const { sb, householdId, user } = await requireFamily();
