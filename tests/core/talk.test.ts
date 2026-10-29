@@ -387,7 +387,7 @@ describe('handleTalk care signals', () => {
       chat: async () => 'Oh dear, where does it hurt?\nMOOD: calm',
       logCareSignal: async (_h, kind) => { signals.push(kind); },
     });
-    await handleTalk(deps, { householdId: 'h1', text: 'My knee hurts a lot today.' });
+    await handleTalk(deps, { householdId: 'h1', text: 'My knee is sore and stiff today.' });
     expect(signals).toEqual(['pain']);
     expect(alerts.some((a) => a.reason === 'care')).toBe(true);
     const system = (chat.mock.calls[0] as unknown as [{ role: string; content: string }[]])[0][0].content;

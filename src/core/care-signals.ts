@@ -11,10 +11,11 @@ export const CARE_ALERT_WINDOW_SECONDS = 6 * 3600;
 export const CONFUSION_STREAK = 3;
 
 const WORDS: Record<Exclude<CareKind, 'confusion'>, RegExp> = {
-  pain: /\b(?:hurts?|hurting|pain|painful|aches?|aching|sore|throbbing|agony)\b/i,
+  // the sharp words (pain, hurts, aches) are emergencies in safety.ts; these are the quieter ones
+  pain: /\b(?:hurts?|hurting|pain|painful|aches?|aching|sore|stiff|throbbing|agony|uncomfortable)\b/i,
   breath: /\b(?:can't breathe|cannot breathe|breathless|short of breath|out of breath|wheezing|gasping|chest is tight)\b/i,
   distress: /\b(?:crying|can't take it|cannot take it|want it to end|can't go on|cannot go on|give up|no point|hopeless)\b/i,
-  fear: /\b(?:scared|afraid|frightened|terrified|petrified)\b/i,
+  fear: /\b(?:scared|afraid|frightened|terrified|petrified|worried sick|so worried|nervous)\b/i,
   appetite: /\b(?:not hungry|didn't eat|did not eat|haven't eaten|have not eaten|can't eat|cannot eat|no appetite|skipped (?:lunch|dinner|breakfast))\b/i,
 };
 
