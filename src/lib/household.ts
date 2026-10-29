@@ -2,14 +2,23 @@ import 'server-only';
 import { redirect } from 'next/navigation';
 import { supabaseServer, supabaseAdmin } from '@/lib/supabase/server';
 import { hashDeviceToken } from '@/lib/device-token';
+import { canAdmin, type Role } from '@/core/roles';
 
 export async function requireFamily() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) redirect('/login');
-  const { data } = await sb.from('household_members').select('household_id').eq('user_id', user.id).maybeSingle();
+  const { data } = await sb.from('household_members').select('household_id, role, display_name').eq('user_id', user.id).maybeSingle();
   if (!data) redirect('/family/setup');
-  return { sb, user, householdId: data.household_id as string };
+  const role = (data.role as Role) ?? 'family';
+  return { sb, user, householdId: data.household_id as string, role, displayName: (data.display_name as string | null) ?? null };
+}
+
+/** A page or action only an owner or admin may use. */
+export async function requireAdmin() {
+  const fam = await requireFamily();
+  if (!canAdmin(fam.role)) redirect('/family');
+  return fam;
 }
 
 export async function getDeviceHousehold(token: string): Promise<string | null> {
