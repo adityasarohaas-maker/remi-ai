@@ -1,6 +1,6 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { chatText, chatStream, MODELS } from '@/lib/nebius';
+import { chatText, chatStream, MODELS } from '@/lib/claude';
 import { sendAlert } from '@/lib/alerts';
 import { localParts, dayRangeUtc, safeTimeZone } from '@/core/time';
 import type { CoreDeps } from '@/core/talk';
@@ -11,11 +11,11 @@ import type { HouseholdContext, RoutineItem, Approach } from '@/core/types';
 const FIRST_WORDS_MS = 3500;
 
 async function withBackup(purpose: 'story' | undefined, run: (model: string) => Promise<string>, mayRetry: () => boolean): Promise<string> {
-  const model = purpose === 'story' ? MODELS.story() : MODELS.chat();
+  const model = purpose === 'story' ? MODELS.deep() : MODELS.chat();
   try {
     return await run(model);
   } catch (e) {
-    const backup = purpose === 'story' ? MODELS.chat() : MODELS.backup();
+    const backup = MODELS.backup();
     if (!backup || backup === model || !mayRetry()) throw e;
     console.error(`chat model ${model} failed, trying ${backup}`, e);
     return run(backup);

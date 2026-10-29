@@ -27,7 +27,7 @@ export async function handleIdentify(deps: CoreDeps, input: { householdId: strin
   try {
     reply = parseMoodTag(await deps.chat(
       buildRecognitionMessages({ preferredName: h.preferredName, language: h.language, person }),
-      { maxTokens: 120, temperature: 0.4 },
+      { maxTokens: 120, effort: 'low' },
     )).reply;
     if (!reply) throw new Error('empty');
   } catch {

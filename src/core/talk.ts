@@ -1,10 +1,10 @@
 import type { HouseholdContext } from './types';
-import type { ChatMessage } from '@/lib/nebius';
+import type { ChatMessage } from '@/lib/claude';
 import type { AlertReason } from '@/lib/alerts';
 import type { FaceSample } from './face-match';
 
 /** purpose 'story': a model that tells stories well (the everyday model is picked for speed). */
-export type ChatOpts = { maxTokens: number; temperature: number; purpose?: 'story' };
+export type ChatOpts = { maxTokens: number; effort?: 'low' | 'medium' | 'high'; purpose?: 'story' };
 import { localParts } from './time';
 import { reminderStates } from './reminders';
 import { detectSafetyWords } from './safety';
@@ -117,7 +117,7 @@ export async function handleTalk(deps: CoreDeps, input: {
   let toldFamily: string | null = null;
   try {
     // a story gets the storyteller model and room to tell it; the prompt keeps everyday replies short
-    const opts: ChatOpts = story ? { maxTokens: 700, temperature: 0.9, purpose: 'story' } : { maxTokens: 400, temperature: 0.6 };
+    const opts: ChatOpts = story ? { maxTokens: 700, effort: 'medium', purpose: 'story' } : { maxTokens: 400, effort: 'low' };
     const raw = input.onDelta && deps.chatStream
       ? await deps.chatStream(messages, opts, input.onDelta)
       : await deps.chat(messages, opts);

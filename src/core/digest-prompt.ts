@@ -1,5 +1,5 @@
 import type { DayFacts } from './day-summary';
-import type { ChatMessage } from '@/lib/nebius';
+import type { ChatMessage } from '@/lib/claude';
 
 export function buildDigestMessages(preferredName: string, facts: DayFacts): ChatMessage[] {
   return [

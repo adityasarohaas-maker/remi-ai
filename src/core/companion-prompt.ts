@@ -2,7 +2,7 @@ import type { Guidance, Person } from './types';
 import type { RoutineWithState } from './reminders';
 import type { PartOfDay } from './time';
 import type { SafetyCategory } from './safety';
-import type { ChatMessage } from '@/lib/nebius';
+import type { ChatMessage } from '@/lib/claude';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', mr: 'Marathi',
