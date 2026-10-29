@@ -12,6 +12,7 @@ import { findSensitiveGuidance } from './sensitive';
 import { parseMoodTag, extractTellFamily, extractAsked, type Mood } from './mood';
 import { pickSteer } from './story-steer';
 import { wantsToStopRecording, STOPPED_KEEPING } from './consent';
+import { detectCareSignals, CARE_ALERTS_PER_KIND, CARE_ALERT_WINDOW_SECONDS, CARE_LABEL, type CareKind } from './care-signals';
 import { buildCompanionPrompt, languageName, wantsStory } from './companion-prompt';
 import { fallbackReply, helpSentMessage, timeAnswer } from './messages';
 import { worthJoining, JOIN_IN_COOLDOWN_SECONDS } from './listening';
@@ -40,6 +41,8 @@ export interface CoreDeps {
   markQuestionAsked(questionId: string): Promise<void>;
   /** She told Remi to stop (or start again) keeping her voice. */
   setRecordVoice(householdId: string, on: boolean): Promise<void>;
+  /** Something worth the family's or the care team's attention, kept for the Today page. */
+  logCareSignal(householdId: string, kind: CareKind, detail: string): Promise<void>;
 }
 
 export type TalkMode = 'addressed' | 'followup' | 'overheard';
@@ -112,6 +115,18 @@ export async function handleTalk(deps: CoreDeps, input: {
     alerts.push(deps.alert(householdId, 'call_request', `${h.preferredName} is asking about ${sensitive.topic}. Please call ${sensitive.callPersonName ?? h.primaryContactName ?? 'them'} now.`));
   }
 
+  // Signs worth a look, short of an emergency: noted for the family, Remi asks one gentle follow-up.
+  const recentHistory = await historyP;
+  const confusedLately = recentHistory.filter((t) => t.mood === 'confused').length + (/\b(?:where am i|what day|who are you)\b/i.test(text) ? 1 : 0);
+  // Safety words already alerted above; care signals are still noted for the Today page, but alert only on their own.
+  const care = detectCareSignals(text, 'unknown', confusedLately);
+  for (const kind of care) {
+    alerts.push(deps.logCareSignal(householdId, kind, text));
+    if (!safety.length && await deps.takeRateToken(householdId, `care:${kind}`, CARE_ALERTS_PER_KIND, CARE_ALERT_WINDOW_SECONDS)) {
+      alerts.push(deps.alert(householdId, 'care', `${CARE_LABEL[kind]}. ${h.preferredName} said: "${text}"`));
+    }
+  }
+
   const story = wantsStory(text) && !safety.length;
   // overheard chatter is never the moment to bring something up
   // she is looking at a photo right now: that is what to talk about, whatever Remi raised earlier
@@ -124,9 +139,9 @@ export async function handleTalk(deps: CoreDeps, input: {
     now: local, people: ctx.people,
     routine: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
     primaryContactName: h.primaryContactName, sensitive, safety, heardAs: input.mode === 'addressed' ? undefined : input.mode, story,
-    careType: ctx.careType, steer,
+    careType: ctx.careType, steer, care,
   });
-  const history = (await historyP).slice(-6);
+  const history = recentHistory.slice(-6);
   const messages: ChatMessage[] = [
     { role: 'system', content: system },
     // Earlier replies keep their MOOD line: without it the model copies the history and stops writing one.
@@ -171,11 +186,14 @@ export async function handleTalk(deps: CoreDeps, input: {
     fallback = true;
   }
 
+  if (mood === 'confused' && !care.includes('confusion') && detectCareSignals('', mood, confusedLately + 1).includes('confusion')) {
+    alerts.push(deps.logCareSignal(householdId, 'confusion', text));
+  }
   await Promise.allSettled(alerts);
   if (reply === null) return { ...silent, body: { reply: null, alerted: alerts.length > 0 } };
   await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed', toldFamily, recordingId: input.recordingId ?? null,
     // what Remi brought up this turn, so it isn't brought up again too soon
     steer: askedQuestion ? 'question' : steer && !fallback ? steer.kind : null, askedQuestion,
-    photoId: input.photo?.id ?? null, personName: input.personName ?? null });
+    photoId: input.photo?.id ?? null, personName: input.personName ?? null, care });
   return { status: 200, body: { reply, mood, alerted: safety.length > 0 || alerts.length > 0 } };
 }

@@ -2,14 +2,20 @@ import { requireFamily } from '@/lib/household';
 import { saveProfile } from './actions';
 import { LocaleFields } from '../../components/locale-fields';
 import { isDemoHousehold } from '@/core/demo';
+import { canAdmin } from '@/core/roles';
+import { CareContacts } from './care-contacts';
 
 const input = 'mt-1 w-full rounded-lg border px-4 py-3';
 
 export default async function ProfilePage() {
-  const { sb, householdId } = await requireFamily();
-  const { data: h } = await sb.from('households').select('*').eq('id', householdId).single();
+  const { sb, householdId, role } = await requireFamily();
+  const [{ data: h }, { data: contacts }] = await Promise.all([
+    sb.from('households').select('*').eq('id', householdId).single(),
+    sb.from('care_contacts').select('id, name, email').eq('household_id', householdId).order('name'),
+  ]);
   if (!h) return null;
   return (
+    <>
     <section className="max-w-xl">
       <h1 className="text-2xl font-semibold">Profile</h1>
       <p className="mt-1 text-stone-600">{h.patient_name}</p>
@@ -29,5 +35,7 @@ export default async function ProfilePage() {
         <button className="rounded-lg bg-garden px-5 py-3 text-white">Save</button>
       </form>
     </section>
+    <CareContacts contacts={(contacts ?? []) as { id: string; name: string; email: string }[]} admin={canAdmin(role)} />
+    </>
   );
 }

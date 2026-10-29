@@ -21,7 +21,7 @@ function makeDeps(over: Partial<CoreDeps> = {}) {
   const deps: CoreDeps = {
     now: () => new Date('2026-10-17T07:40:00Z'),
     loadContext: async () => ctx,
-    recentTurns: async () => [{ text: 'What day is it?', reply: 'It is Saturday.' }],
+    recentTurns: async () => [{ text: 'What day is it?', reply: 'It is Saturday.', mood: 'calm' }],
     takeRateToken: async () => true,
     chat,
     logEvent: async (_h, type, payload) => { logged.push({ type, payload }); },
@@ -29,6 +29,7 @@ function makeDeps(over: Partial<CoreDeps> = {}) {
     faceGallery: async () => [],
     markQuestionAsked: async () => {},
     setRecordVoice: async () => {},
+    logCareSignal: async () => {},
     ...over,
   };
   return { deps, logged, alerts, chat };
@@ -376,5 +377,20 @@ describe('handleTalk and her consent', () => {
     expect(alerts.some((a) => a.reason === 'message')).toBe(true);
     expect(chat).not.toHaveBeenCalled();
     expect(r.body.reply).toMatch(/won't keep/i);
+  });
+});
+
+describe('handleTalk care signals', () => {
+  it('notes pain for the family and asks Remi to follow up gently', async () => {
+    const signals: string[] = [];
+    const { deps, alerts, chat } = makeDeps({
+      chat: async () => 'Oh dear, where does it hurt?\nMOOD: calm',
+      logCareSignal: async (_h, kind) => { signals.push(kind); },
+    });
+    await handleTalk(deps, { householdId: 'h1', text: 'My knee hurts a lot today.' });
+    expect(signals).toEqual(['pain']);
+    expect(alerts.some((a) => a.reason === 'care')).toBe(true);
+    const system = (chat.mock.calls[0] as unknown as [{ role: string; content: string }[]])[0][0].content;
+    expect(system).toMatch(/pain/);
   });
 });

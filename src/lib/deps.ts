@@ -150,6 +150,11 @@ export function supabaseDeps(): CoreDeps {
       if (error) console.error('setRecordVoice failed', error);
     },
 
+    async logCareSignal(householdId, kind, detail) {
+      const { error } = await db.from('care_signals').insert({ household_id: householdId, kind, detail: detail.slice(0, 500) });
+      if (error) console.error('logCareSignal failed', error);
+    },
+
     async markQuestionAsked(questionId) {
       const { error } = await db.from('family_questions').update({ status: 'asked', asked_at: new Date().toISOString() })
         .eq('id', questionId).eq('status', 'pending');

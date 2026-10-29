@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { WriteNoteButton } from './write-note';
 import { memoryFromRow, MEMORY_COLUMNS, type MemoryDbRow } from '@/core/memory-row';
 import { MemoryCard } from './story/memory-card';
+import { CARE_LABEL, type CareKind } from '@/core/care-signals';
 
 const REASON: Record<string, string> = {
   safety: 'Safety words heard',
@@ -26,11 +27,13 @@ export default async function FamilyHome() {
   const now = new Date();
   const today = localParts(now, tz).day;
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const [{ data: alerts }, { data: digest }, { data: talk }, { data: fresh }] = await Promise.all([
+  const dayStart = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const [{ data: alerts }, { data: digest }, { data: talk }, { data: fresh }, { data: signals }] = await Promise.all([
     sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'alert').order('created_at', { ascending: false }).limit(10),
     sb.from('digests').select('summary, created_at').eq('household_id', householdId).eq('day', today).maybeSingle(),
     sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'conversation').order('created_at', { ascending: false }).limit(10),
     sb.from('memories').select(MEMORY_COLUMNS).eq('household_id', householdId).gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(3),
+    sb.from('care_signals').select('kind, detail, created_at').eq('household_id', householdId).gte('created_at', dayStart).order('created_at', { ascending: false }).limit(10),
   ]);
   const newStories = ((fresh ?? []) as MemoryDbRow[]).map(memoryFromRow);
   const when = (iso: string) => {
@@ -98,6 +101,20 @@ export default async function FamilyHome() {
           })}
           {!alerts?.length && <li className="text-stone-600">No alerts. All calm.</li>}
         </ul>
+        {(signals ?? []).length > 0 && (
+          <>
+            <h2 className="mt-8 text-xl font-semibold">Worth a look</h2>
+            <ul className="mt-3 space-y-2">
+              {(signals ?? []).map((s, i) => (
+                <li key={i} className="rounded-xl border-l-4 border-marigold bg-white p-3">
+                  <p className="font-medium">{CARE_LABEL[s.kind as CareKind] ?? s.kind}</p>
+                  <p className="text-sm text-stone-700">“{s.detail}”</p>
+                  <p className="mt-1 text-xs text-stone-500">{when(s.created_at)}</p>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </aside>
     </div>
   );

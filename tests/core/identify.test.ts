@@ -22,6 +22,7 @@ function deps(over: Partial<CoreDeps> = {}): CoreDeps {
     faceGallery: async () => [{ personId: 'rohan', embedding: emb(0) }],
     markQuestionAsked: async () => {},
     setRecordVoice: async () => {},
+    logCareSignal: async () => {},
     ...over,
   };
 }

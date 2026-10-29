@@ -6,6 +6,21 @@ import { isValidTimeZone } from '@/core/time';
 import { isDemoHousehold } from '@/core/demo';
 import { isSupportedLanguage } from '@/core/voices';
 
+export async function addCareContact(form: FormData) {
+  const { sb, householdId } = await requireFamily();
+  const name = field(form, 'name', 80);
+  const email = field(form, 'email', 120).toLowerCase();
+  if (!name || !email.includes('@')) return;
+  await sb.from('care_contacts').insert({ household_id: householdId, name, email }); // RLS: admins only
+  revalidatePath('/family/profile');
+}
+
+export async function removeCareContact(form: FormData) {
+  const { sb } = await requireFamily();
+  await sb.from('care_contacts').delete().eq('id', field(form, 'id', 64));
+  revalidatePath('/family/profile');
+}
+
 export async function saveProfile(form: FormData) {
   const { sb, householdId } = await requireFamily();
   const v = (k: string, max: number) => field(form, k, max) || null;

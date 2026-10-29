@@ -5,6 +5,7 @@ import type { SafetyCategory } from './safety';
 import type { ChatMessage } from '@/lib/claude';
 import { STAGE_HINT, type Steer } from './story-steer';
 import type { CareType } from './types';
+import type { CareKind } from './care-signals';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', mr: 'Marathi',
@@ -36,6 +37,8 @@ export interface CompanionPromptInput {
   careType?: CareType;
   /** Something Remi may gently bring up this turn, if the moment is right. */
   steer?: Steer | null;
+  /** Signs worth a look that were heard in what she just said. */
+  care?: CareKind[];
 }
 
 const STORY = new RegExp(String.raw`(?<![\p{L}\p{M}])(?:stor(?:y|ies)|tale|fable|kahani|kahaani|kissa|qissa|कहानी|कहानियाँ|किस्सा|cuento|historia|histoire|conte|geschichte|märchen|história|conto|قصة|حكاية|গল্প|கதை|కథ|کہانی|गोष्ट)(?![\p{L}\p{M}])|故事|物語|お話|昔話`, 'iu');
@@ -130,6 +133,9 @@ Follow the family's guidance closely. Do not say that anyone has died unless the
   if (i.story && !i.safety.length) sections.push(storySection(who));
   if (i.steer && !i.safety.length && !i.story && !i.sensitive) sections.push(steerSection(who, i.steer));
   sections.push(`When ${who} says who a story is for ("only for my daughter", "after I'm gone", "give this to Riya on her wedding day"), say back in one short sentence what you understood, so she can correct you.`);
+  if (i.care?.length && !i.safety.length) {
+    sections.push(`${who} may not be well (${i.care.join(', ')}). Respond to that first, warmly: one gentle follow-up question (where it hurts, since when, whether ${contact} knows), nothing medical, no advice. Do not bring up anything else this turn.`);
+  }
   if (i.safety.length) {
     sections.push(`${who} may be in difficulty (${i.safety.join(', ')}). Reassure them calmly and tell them you are letting ${contact} know right now. Do not promise anything else.`);
   }
