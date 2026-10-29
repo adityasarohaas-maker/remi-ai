@@ -19,11 +19,14 @@ export async function generateDigest(householdId: string, dayArg?: string) {
   const { data: events } = await db.from('events').select('type, payload, created_at')
     .eq('household_id', householdId).gte('created_at', start.toISOString()).lt('created_at', end.toISOString())
     .order('created_at').limit(2000);
+  const { data: told } = await db.from('memories').select('title').eq('household_id', householdId)
+    .gte('created_at', start.toISOString()).lt('created_at', end.toISOString()).order('created_at').limit(12);
+  const storiesToday = (told ?? []).map((m) => m.title as string);
   const minutes = day === local.day ? local.minutes : 24 * 60;
   const facts = summarizeDay(day, (events ?? []) as DayEvent[], reminderStates(ctx.routine, ctx.doneIds, minutes), tz);
   // No key, a model outage or an empty reply still gives the family a note, written from the facts alone.
   let model = MODELS.deep();
-  let summary = await chatText(buildDigestMessages(ctx.household.preferredName, facts), {
+  let summary = await chatText(buildDigestMessages(ctx.household.preferredName, facts, storiesToday), {
     model, maxTokens: 700, effort: 'medium', timeoutMs: 60_000,
   }).catch((e) => { console.error('digest model failed', e); return ''; });
   if (!summary) { summary = factsNote(ctx.household.preferredName, facts); model = 'facts-only'; }

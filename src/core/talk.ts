@@ -13,7 +13,7 @@ import { parseMoodTag, extractTellFamily, extractAsked, type Mood } from './mood
 import { pickSteer } from './story-steer';
 import { wantsToStopRecording, STOPPED_KEEPING } from './consent';
 import { detectCareSignals, CARE_ALERTS_PER_KIND, CARE_ALERT_WINDOW_SECONDS, CARE_LABEL, type CareKind } from './care-signals';
-import { buildCompanionPrompt, languageName, wantsStory } from './companion-prompt';
+import { buildCompanionPrompt, languageName, wantsStory, opensWishes } from './companion-prompt';
 import { fallbackReply, helpSentMessage, timeAnswer } from './messages';
 import { worthJoining, JOIN_IN_COOLDOWN_SECONDS } from './listening';
 import { isSupportedLanguage } from './voices';
@@ -128,6 +128,8 @@ export async function handleTalk(deps: CoreDeps, input: {
   }
 
   const story = wantsStory(text) && !safety.length;
+  // what she wants after she is gone: only ever her subject, and nothing else is raised while she is on it
+  const wishesOpen = !overheard && (opensWishes(text) || recentHistory.slice(-2).some((t) => opensWishes(t.text)));
   // overheard chatter is never the moment to bring something up
   // she is looking at a photo right now: that is what to talk about, whatever Remi raised earlier
   const steer = input.photo ? { kind: 'photo' as const, id: input.photo.id, note: input.photo.note } : overheard ? null : pickSteer({
@@ -139,7 +141,7 @@ export async function handleTalk(deps: CoreDeps, input: {
     now: local, people: ctx.people,
     routine: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
     primaryContactName: h.primaryContactName, sensitive, safety, heardAs: input.mode === 'addressed' ? undefined : input.mode, story,
-    careType: ctx.careType, steer, care,
+    careType: ctx.careType, steer: wishesOpen ? null : steer, care, wishesOpen,
   });
   const history = recentHistory.slice(-6);
   const messages: ChatMessage[] = [
