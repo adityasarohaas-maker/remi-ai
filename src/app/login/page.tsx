@@ -1,13 +1,26 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/browser';
+import { PRODUCT_NAME } from '@/core/brand';
+import type { Typing } from '@/core/forest-motion';
+import { Forest } from '../_site/forest/forest';
+import { BrandMark } from '../_site/brand-mark';
 
+/** Sign in, in the forest: Kodi watches the email being typed and covers his eyes for the password. */
 export default function LoginPage() {
+  return <Suspense fallback={null}><Login /></Suspense>;
+}
+
+function Login() {
   const router = useRouter();
-  const [mode, setMode] = useState<'in' | 'up'>('in');
+  const params = useSearchParams();
+  const [mode, setMode] = useState<'in' | 'up'>(params.get('mode') === 'create' ? 'up' : 'in');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [typing, setTyping] = useState<Typing>('idle');
+  const [typedLen, setTypedLen] = useState(0);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,19 +40,32 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-sm px-4 py-16">
-      <h1 className="text-3xl font-semibold">{mode === 'in' ? 'Family sign in' : 'Create a family account'}</h1>
-      <form onSubmit={submit} className="mt-8 space-y-4">
-        <input name="email" type="email" required autoComplete="email" placeholder="Email" className="w-full rounded-lg border px-4 py-3" />
-        <input name="password" type="password" required minLength={8} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} placeholder="Password (8+ characters)" className="w-full rounded-lg border px-4 py-3" />
-        {error && <p role="alert" className="text-red-700">{error}</p>}
-        <button disabled={busy} className="w-full rounded-lg bg-garden px-4 py-3 text-white disabled:opacity-60">
-          {busy ? 'Please wait…' : mode === 'in' ? 'Sign in' : 'Create account'}
-        </button>
-      </form>
-      <button onClick={() => setMode(mode === 'in' ? 'up' : 'in')} className="mt-4 text-garden underline">
-        {mode === 'in' ? 'New here? Create an account' : 'Have an account? Sign in'}
-      </button>
+    <main className="forest">
+      <Forest mode="signin" typing={typing} typedLen={typedLen} />
+      <div className="f-si-shade" aria-hidden />
+      <div className={`f-bubble f-caveat ${typing === 'password' ? 'on' : ''}`} aria-hidden>I&apos;m not looking!</div>
+      <section className="f-si-card f-glass">
+        <Link href="/" className="f-brand" style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 18, letterSpacing: '-.02em', color: 'inherit', textDecoration: 'none' }}><BrandMark />{PRODUCT_NAME}</Link>
+        <h1>{mode === 'in' ? 'Welcome back' : 'Create your family account'}</h1>
+        <p className="f-si-sub">{mode === 'in' ? 'Sign in to hear how the week has gone, and the stories that arrived.' : `Ten minutes to set up. Then ${PRODUCT_NAME} starts listening.`}</p>
+        <form onSubmit={submit}>
+          <label className="f-si-field"><span>Email</span>
+            <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com"
+              onFocus={(e) => { setTyping('email'); setTypedLen(e.currentTarget.value.length); }}
+              onInput={(e) => { setTyping('email'); setTypedLen(e.currentTarget.value.length); }}
+              onBlur={() => setTyping('idle')} />
+          </label>
+          <label className="f-si-field"><span>Password</span>
+            <input id="password" name="password" type="password" required minLength={8} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} placeholder={mode === 'in' ? 'Your password' : 'Choose a password (8+ characters)'}
+              onFocus={() => setTyping('password')} onInput={() => setTyping('password')} onBlur={() => setTyping('idle')} />
+          </label>
+          {error && <p role="alert" className="f-si-err">{error}</p>}
+          <button disabled={busy} className="f-btn f-si-btn">{busy ? 'Please wait…' : mode === 'in' ? 'Sign in' : 'Create account'}</button>
+        </form>
+        <p className="f-si-alt">
+          {mode === 'in' ? <>New here? <button type="button" onClick={() => setMode('up')}>Set up {PRODUCT_NAME} for your family</button></> : <>Have an account? <button type="button" onClick={() => setMode('in')}>Sign in</button></>}
+        </p>
+      </section>
     </main>
   );
 }

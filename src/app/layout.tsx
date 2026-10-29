@@ -8,8 +8,9 @@ const atkinson = Atkinson_Hyperlegible_Next({ variable: "--font-atkinson", subse
 const devanagari = Noto_Sans_Devanagari({ variable: "--font-devanagari", subsets: ["devanagari"], weight: ["400", "600"] });
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 // The forest (landing page and sign-in) is set in Geist; Caveat is only for Kodi's speech bubble.
-const geist = Geist({ variable: "--font-geist", subsets: ["latin"], weight: ["300", "400", "500", "600"], display: "swap" });
-const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"], weight: ["600"], display: "swap" });
+// both are variable fonts: no weight list, which also sidesteps a Turbopack dev error with multi-weight Google queries
+const geist = Geist({ variable: "--font-geist", subsets: ["latin"], display: "swap" });
+const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Remi AI",
