@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { requireFamily } from '@/lib/household';
 
 const NAV = [
-  ['/family', 'Today'], ['/family/people', 'People'], ['/family/routine', 'Routine'],
+  ['/family', 'Today'], ['/family/story', 'Story'], ['/family/people', 'People'], ['/family/routine', 'Routine'],
   ['/family/guidance', 'Hard questions'], ['/family/tablet', 'Tablet'], ['/family/members', 'Members'], ['/family/profile', 'Profile'],
 ] as const;
 

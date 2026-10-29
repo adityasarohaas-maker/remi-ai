@@ -1,7 +1,10 @@
 import { requireFamily } from '@/lib/household';
 import { localParts, safeTimeZone } from '@/core/time';
 import { noteBlocks } from '@/core/note-blocks';
+import Link from 'next/link';
 import { WriteNoteButton } from './write-note';
+import { memoryFromRow, MEMORY_COLUMNS, type MemoryDbRow } from '@/core/memory-row';
+import { MemoryCard } from './story/memory-card';
 
 const REASON: Record<string, string> = {
   safety: 'Safety words heard',
@@ -21,11 +24,14 @@ export default async function FamilyHome() {
   const { data: h } = await sb.from('households').select('preferred_name, timezone').eq('id', householdId).single();
   const tz = safeTimeZone(h?.timezone);
   const today = localParts(new Date(), tz).day;
-  const [{ data: alerts }, { data: digest }, { data: talk }] = await Promise.all([
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [{ data: alerts }, { data: digest }, { data: talk }, { data: fresh }] = await Promise.all([
     sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'alert').order('created_at', { ascending: false }).limit(10),
     sb.from('digests').select('summary, created_at').eq('household_id', householdId).eq('day', today).maybeSingle(),
     sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'conversation').order('created_at', { ascending: false }).limit(10),
+    sb.from('memories').select(MEMORY_COLUMNS).eq('household_id', householdId).gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(3),
   ]);
+  const newStories = ((fresh ?? []) as MemoryDbRow[]).map(memoryFromRow);
   const when = (iso: string) => {
     const p = localParts(new Date(iso), tz);
     return p.day === today ? p.prettyTime : `${p.prettyTime}, ${p.prettyDate}`;
@@ -47,6 +53,14 @@ export default async function FamilyHome() {
           <p className="mt-3 text-stone-600">No note yet today. Remi writes one every evening at 8 pm, or you can ask for it now.</p>
         )}
         <WriteNoteButton hasNote={Boolean(digest)} />
+
+        {newStories.length > 0 && (
+          <>
+            <h2 className="mt-10 text-xl font-semibold">New stories this week</h2>
+            <div className="mt-3 space-y-3">{newStories.map((m) => <MemoryCard key={m.id} m={m} name={name} />)}</div>
+            <Link href="/family/story" className="mt-2 inline-block text-sm text-garden underline">All of {name}&apos;s story</Link>
+          </>
+        )}
 
         <h2 className="mt-10 text-xl font-semibold">What {name} talked about</h2>
         <ul className="mt-3 space-y-3">
