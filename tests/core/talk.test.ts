@@ -6,7 +6,8 @@ import type { HouseholdContext } from '@/core/types';
 const ctx: HouseholdContext = {
   household: { id: 'h1', patientName: 'Avni Devi', preferredName: 'Avni', language: 'en-IN', timezone: 'Asia/Kolkata', about: null, homeAddress: null, primaryContactName: 'Priya', primaryContactPhone: null },
   people: [{ id: 'p2', name: 'Ramesh', relation: 'husband', notes: null, isDeceased: true }],
-  routine: [], doneIds: [],
+  routine: [], doneIds: [], careType: 'elderly', pendingQuestions: [], unshownPhoto: null,
+  storyCoverage: { childhood: 0, youth: 0, marriage: 0, work: 0, parenthood: 0, later: 0, other: 0, wishes: 0 }, lastSteerAt: null,
   guidance: [
     { id: 'g1', topic: 'Husband Ramesh', triggerWords: ['Ramesh'], approach: 'share_memory', familyScript: 'Ramesh loved your rajma.', callPersonName: null },
     { id: 'g2', topic: 'Her mother', triggerWords: ['mother'], approach: 'call_relative', familyScript: 'Priya will tell you about her.', callPersonName: 'Priya' },
@@ -26,6 +27,7 @@ function makeDeps(over: Partial<CoreDeps> = {}) {
     logEvent: async (_h, type, payload) => { logged.push({ type, payload }); },
     alert: async (_h, reason, detail) => { alerts.push({ reason, detail }); },
     faceGallery: async () => [],
+    markQuestionAsked: async () => {},
     ...over,
   };
   return { deps, logged, alerts, chat };
@@ -333,5 +335,19 @@ describe('handleTalk recordings', () => {
     const { deps, logged } = makeDeps();
     await handleTalk(deps, { householdId: 'h1', text: 'Hello Remi' });
     expect(logged[0].payload).toMatchObject({ recordingId: null });
+  });
+});
+
+describe('handleTalk steering', () => {
+  it('marks a family question asked when Remi raises it, and never speaks the ASKED line', async () => {
+    const asked: string[] = [];
+    const { deps } = makeDeps({
+      chat: async () => 'Your son wonders about 1971. What do you remember?\nASKED: q1\nMOOD: calm',
+      loadContext: async () => ({ ...ctx, pendingQuestions: [{ id: 'q1', question: 'Ask about 1971' }] }),
+      markQuestionAsked: async (id) => { asked.push(id); },
+    });
+    const r = await handleTalk(deps, { householdId: 'h1', text: 'Nothing much today.' });
+    expect(r.body.reply).toBe('Your son wonders about 1971. What do you remember?');
+    expect(asked).toEqual(['q1']);
   });
 });

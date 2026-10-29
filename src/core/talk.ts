@@ -9,7 +9,8 @@ import { localParts } from './time';
 import { reminderStates } from './reminders';
 import { detectSafetyWords } from './safety';
 import { findSensitiveGuidance } from './sensitive';
-import { parseMoodTag, extractTellFamily, type Mood } from './mood';
+import { parseMoodTag, extractTellFamily, extractAsked, type Mood } from './mood';
+import { pickSteer } from './story-steer';
 import { buildCompanionPrompt, languageName, wantsStory } from './companion-prompt';
 import { fallbackReply, helpSentMessage, timeAnswer } from './messages';
 import { worthJoining, JOIN_IN_COOLDOWN_SECONDS } from './listening';
@@ -34,6 +35,8 @@ export interface CoreDeps {
   logEvent(householdId: string, type: string, payload: Record<string, unknown>): Promise<void>;
   alert(householdId: string, reason: AlertReason, detail: string): Promise<void>;
   faceGallery(householdId: string): Promise<FaceSample[]>;
+  /** Remi raised this family question in conversation. */
+  markQuestionAsked(questionId: string): Promise<void>;
 }
 
 export type TalkMode = 'addressed' | 'followup' | 'overheard';
@@ -95,11 +98,17 @@ export async function handleTalk(deps: CoreDeps, input: {
   }
 
   const story = wantsStory(text) && !safety.length;
+  // overheard chatter is never the moment to bring something up
+  const steer = overheard ? null : pickSteer({
+    careType: ctx.careType, pendingQuestions: ctx.pendingQuestions, unshownPhoto: ctx.unshownPhoto, storyCoverage: ctx.storyCoverage,
+    minutesSinceLastSteer: ctx.lastSteerAt ? (now.getTime() - ctx.lastSteerAt.getTime()) / 60_000 : Infinity,
+  });
   const system = buildCompanionPrompt({
     preferredName: h.preferredName, language, about: h.about,
     now: local, people: ctx.people,
     routine: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
     primaryContactName: h.primaryContactName, sensitive, safety, heardAs: input.mode === 'addressed' ? undefined : input.mode, story,
+    careType: ctx.careType, steer,
   });
   const history = (await historyP).slice(-6);
   const messages: ChatMessage[] = [
@@ -117,6 +126,7 @@ export async function handleTalk(deps: CoreDeps, input: {
   let mood: Mood = 'unknown';
   let fallback = false;
   let toldFamily: string | null = null;
+  let askedQuestion: string | null = null;
   try {
     // a story gets the storyteller model and room to tell it; the prompt keeps everyday replies short
     const opts: ChatOpts = story ? { maxTokens: 700, effort: 'medium', purpose: 'story' } : { maxTokens: 400, effort: 'low' };
@@ -125,7 +135,12 @@ export async function handleTalk(deps: CoreDeps, input: {
       : await deps.chat(messages, opts);
     ({ reply, mood } = parseMoodTag(raw));
     const told = extractTellFamily(reply);
-    reply = told.reply;
+    const asked = extractAsked(told.reply);
+    reply = asked.reply;
+    if (asked.questionId && ctx.pendingQuestions.some((q) => q.id === asked.questionId)) {
+      askedQuestion = asked.questionId;
+      alerts.push(deps.markQuestionAsked(askedQuestion));
+    }
     if (!reply) throw new Error('empty reply');
     if (told.message && (await deps.takeRateToken(householdId, 'tell-family', TELL_FAMILY_PER_10_MIN, 600))) {
       toldFamily = told.message;
@@ -142,6 +157,8 @@ export async function handleTalk(deps: CoreDeps, input: {
 
   await Promise.allSettled(alerts);
   if (reply === null) return { ...silent, body: { reply: null, alerted: alerts.length > 0 } };
-  await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed', toldFamily, recordingId: input.recordingId ?? null });
+  await deps.logEvent(householdId, 'conversation', { text, reply, mood, safety, sensitiveTopic: sensitive?.topic ?? null, fallback, mode: input.mode ?? 'addressed', toldFamily, recordingId: input.recordingId ?? null,
+    // what Remi brought up this turn, so it isn't brought up again too soon
+    steer: askedQuestion ? 'question' : steer && !fallback ? steer.kind : null, askedQuestion });
   return { status: 200, body: { reply, mood, alerted: safety.length > 0 || alerts.length > 0 } };
 }

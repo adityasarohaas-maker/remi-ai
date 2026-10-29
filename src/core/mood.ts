@@ -6,6 +6,7 @@ export type Mood = (typeof MOODS)[number] | 'unknown';
 // Hidden lines usually come on their own line, but models sometimes tack them onto the last sentence.
 const MOOD_TAG = /\[?\s*mood\s*:\s*([a-z]+)\s*\]?\s*$/i;
 const TELL_TAG = /\[?\s*tell_family\s*:\s*(.*?)\s*\]?\s*$/i;
+const ASKED_TAG = /\[?\s*asked\s*:\s*([\w-]+)\s*\]?\s*$/i;
 
 /** Splits a line at a hidden tag: the spoken part before it, and the tag's value. */
 function splitTag(line: string, tag: RegExp): { before: string; value: string } | null {
@@ -40,4 +41,18 @@ export function extractTellFamily(reply: string): { reply: string; message: stri
     } else kept.push(line);
   }
   return { reply: kept.join('\n').trim(), message };
+}
+
+/** Remi raised a family question: the ASKED: line names which one. Never spoken aloud. */
+export function extractAsked(reply: string): { reply: string; questionId: string | null } {
+  let questionId: string | null = null;
+  const kept: string[] = [];
+  for (const line of reply.split('\n')) {
+    const t = splitTag(line, ASKED_TAG);
+    if (t) {
+      questionId = t.value || null;
+      if (t.before) kept.push(t.before);
+    } else kept.push(line);
+  }
+  return { reply: kept.join('\n').trim(), questionId };
 }

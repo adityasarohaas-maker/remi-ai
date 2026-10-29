@@ -5,7 +5,8 @@ import { sendAlert } from '@/lib/alerts';
 import { localParts, dayRangeUtc, safeTimeZone } from '@/core/time';
 import type { CoreDeps } from '@/core/talk';
 import { looksLikeReasoning } from '@/core/text';
-import type { HouseholdContext, RoutineItem, Approach } from '@/core/types';
+import type { HouseholdContext, RoutineItem, Approach, CareType, LifeStage } from '@/core/types';
+import { LIFE_STAGES } from '@/core/types';
 
 // A model that hasn't started its reply by now has stalled (it happens); the backup answers instead.
 const FIRST_WORDS_MS = 3500;
@@ -22,17 +23,27 @@ async function withBackup(purpose: 'story' | undefined, run: (model: string) => 
   }
 }
 
+function storyCoverage(stages: LifeStage[]): Record<LifeStage, number> {
+  const n = Object.fromEntries(LIFE_STAGES.map((s) => [s, 0])) as Record<LifeStage, number>;
+  for (const s of stages) if (s in n) n[s]++;
+  return n;
+}
+
 export function supabaseDeps(): CoreDeps {
   const db = supabaseAdmin();
   return {
     now: () => new Date(),
 
     async loadContext(householdId, now): Promise<HouseholdContext> {
-      const [h, people, routine, guidance] = await Promise.all([
+      const [h, people, routine, guidance, questions, told, steered] = await Promise.all([
         db.from('households').select('*').eq('id', householdId).single(),
         db.from('people').select('id, name, relation, notes, is_deceased').eq('household_id', householdId).order('created_at'),
         db.from('routine_items').select('id, time_of_day, kind, label, spoken_message').eq('household_id', householdId).eq('active', true),
         db.from('sensitive_guidance').select('id, topic, trigger_words, approach, family_script, caller:people(name)').eq('household_id', householdId),
+        db.from('family_questions').select('id, question').eq('household_id', householdId).eq('status', 'pending').order('created_at').limit(3),
+        db.from('memories').select('life_stage').eq('household_id', householdId),
+        db.from('events').select('created_at').eq('household_id', householdId).eq('type', 'conversation')
+          .not('payload->>steer', 'is', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
       if (h.error) throw h.error;
       const tz = safeTimeZone(h.data.timezone as string);
@@ -54,6 +65,11 @@ export function supabaseDeps(): CoreDeps {
           id: g.id, topic: g.topic, triggerWords: g.trigger_words, approach: g.approach as Approach, familyScript: g.family_script,
           callPersonName: (g.caller as unknown as { name: string } | null)?.name ?? null,
         })),
+        careType: (h.data.care_type as CareType | null) ?? 'elderly',
+        pendingQuestions: (questions.data ?? []).map((q) => ({ id: q.id, question: q.question })),
+        unshownPhoto: null, // the photo screen sets this on the turn itself
+        storyCoverage: storyCoverage((told.data ?? []).map((m) => m.life_stage as LifeStage)),
+        lastSteerAt: steered.data?.created_at ? new Date(steered.data.created_at as string) : null,
       };
     },
 
@@ -128,6 +144,12 @@ export function supabaseDeps(): CoreDeps {
     },
 
     alert: sendAlert,
+
+    async markQuestionAsked(questionId) {
+      const { error } = await db.from('family_questions').update({ status: 'asked', asked_at: new Date().toISOString() })
+        .eq('id', questionId).eq('status', 'pending');
+      if (error) console.error('markQuestionAsked failed', error);
+    },
 
     async faceGallery(householdId) {
       const { data } = await db.from('face_embeddings').select('person_id, embedding').eq('household_id', householdId);

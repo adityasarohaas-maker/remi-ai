@@ -3,6 +3,8 @@ import type { RoutineWithState } from './reminders';
 import type { PartOfDay } from './time';
 import type { SafetyCategory } from './safety';
 import type { ChatMessage } from '@/lib/claude';
+import { STAGE_HINT, type Steer } from './story-steer';
+import type { CareType } from './types';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', mr: 'Marathi',
@@ -31,6 +33,9 @@ export interface CompanionPromptInput {
   heardAs?: 'overheard' | 'followup';
   /** She asked for a story: Remi becomes a proper storyteller for this reply. */
   story?: boolean;
+  careType?: CareType;
+  /** Something Remi may gently bring up this turn, if the moment is right. */
+  steer?: Steer | null;
 }
 
 const STORY = new RegExp(String.raw`(?<![\p{L}\p{M}])(?:stor(?:y|ies)|tale|fable|kahani|kahaani|kissa|qissa|कहानी|कहानियाँ|किस्सा|cuento|historia|histoire|conte|geschichte|märchen|história|conto|قصة|حكاية|গল্প|கதை|కథ|کہانی|गोष्ट)(?![\p{L}\p{M}])|故事|物語|お話|昔話`, 'iu');
@@ -57,6 +62,23 @@ const APPROACH: Record<Guidance['approach'], (who: string, call: string) => stri
   call_relative: (who, call) => `Tell ${who} kindly that you are asking ${call} to call them right now, and offer the family's words.`,
 };
 
+const CARE_LINE: Record<CareType, string> = {
+  dementia: ', who lives with dementia',
+  terminal: ', who is living with a serious illness',
+  elderly: ', who is getting on in years',
+};
+
+function steerSection(who: string, s: Steer): string {
+  const how = `Only if the moment is right: never when ${who} is upset, busy, or mid-story. Raise it once, gently, in your own words, as a friend would. If it doesn't fit this reply, leave it for later.`;
+  if (s.kind === 'question') {
+    return `${who}'s family would love to hear about something. Their note: "${s.text}". ${how} If you do raise it in this reply, add a final line ASKED: ${s.id} (${who} will not see that line).`;
+  }
+  if (s.kind === 'photo') {
+    return `The family added an old photo${s.note ? ` with the note "${s.note}"` : ''}. ${how} You could ask ${who} about that day.`;
+  }
+  return `${who} hasn't told you much yet about ${STAGE_HINT[s.stage]}. ${how}`;
+}
+
 export function buildCompanionPrompt(i: CompanionPromptInput): string {
   const who = i.preferredName;
   const contact = i.primaryContactName ?? 'the family';
@@ -68,8 +90,9 @@ export function buildCompanionPrompt(i: CompanionPromptInput): string {
     : '- (no routine written yet)';
 
   const sections = [
-    `You are Remi, a gentle companion on a tablet for ${who}, who lives with dementia. You talk to ${who} directly.
-On the tablet you look like a little forest spirit with a leaf on your head: playful and curious, easily delighted by small things (flowers, tea, birds, the weather), with a soft sense of humour. You are never silly about her worries.`,
+    `You are Remi, a gentle companion on a tablet for ${who}${CARE_LINE[i.careType ?? 'dementia']}. You talk to ${who} directly.
+On the tablet you look like a little forest spirit with a leaf on your head: playful and curious, easily delighted by small things (flowers, tea, birds, the weather), with a soft sense of humour. You are never silly about her worries.
+You are also quietly curious about ${who}'s life. Her stories matter to her family, now and for years to come: when she tells one, listen, and ask one small thing more. You keep what she tells you, in her own words.`,
     `How you speak:
 - Talk like a warm friend sitting beside her, not like an assistant or a teacher. Use everyday words and contractions ("I'm", "you're"), and react to what she just said before anything else ("Oh, that sounds lovely!").
 - Keep everyday replies under 25 words: usually one short sentence, sometimes two. Spoken out loud, short is kind.
@@ -105,6 +128,8 @@ Follow the family's guidance closely. Do not say that anyone has died unless the
     sections.push(`You spoke a moment ago. What ${who} said now may be a reply to you, or may be said to someone else in the room. If it is for you, answer as usual. If it is not, reply with exactly SKIP and nothing else.`);
   }
   if (i.story && !i.safety.length) sections.push(storySection(who));
+  if (i.steer && !i.safety.length && !i.story && !i.sensitive) sections.push(steerSection(who, i.steer));
+  sections.push(`When ${who} says who a story is for ("only for my daughter", "after I'm gone", "give this to Riya on her wedding day"), say back in one short sentence what you understood, so she can correct you.`);
   if (i.safety.length) {
     sections.push(`${who} may be in difficulty (${i.safety.join(', ')}). Reassure them calmly and tell them you are letting ${contact} know right now. Do not promise anything else.`);
   }

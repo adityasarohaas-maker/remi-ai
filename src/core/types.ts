@@ -10,6 +10,11 @@ export interface Guidance { id: string; topic: string; triggerWords: string[]; a
 export interface HouseholdContext {
   household: Household; people: Person[]; routine: RoutineItem[];
   doneIds: string[]; guidance: Guidance[];
+  careType: CareType;
+  pendingQuestions: { id: string; question: string }[];
+  unshownPhoto: { id: string; note: string | null } | null;
+  storyCoverage: Record<LifeStage, number>;
+  lastSteerAt: Date | null;
 }
 
 // --- keeping a life ---

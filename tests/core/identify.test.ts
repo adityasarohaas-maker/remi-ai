@@ -11,7 +11,8 @@ function deps(over: Partial<CoreDeps> = {}): CoreDeps {
     loadContext: async () => ({
       household: { id: 'h1', patientName: 'Avni Devi', preferredName: 'Avni', language: 'en-IN', timezone: 'Asia/Kolkata', about: null, homeAddress: null, primaryContactName: 'Priya', primaryContactPhone: null },
       people: [{ id: 'rohan', name: 'Rohan', relation: 'grandson', notes: 'Loves cricket', isDeceased: false }],
-      routine: [], doneIds: [], guidance: [],
+      routine: [], doneIds: [], guidance: [], careType: 'elderly', pendingQuestions: [], unshownPhoto: null,
+      storyCoverage: { childhood: 0, youth: 0, marriage: 0, work: 0, parenthood: 0, later: 0, other: 0, wishes: 0 }, lastSteerAt: null,
     }),
     recentTurns: async () => [],
     takeRateToken: async () => true,
@@ -19,6 +20,7 @@ function deps(over: Partial<CoreDeps> = {}): CoreDeps {
     logEvent: vi.fn(async () => {}),
     alert: async () => {},
     faceGallery: async () => [{ personId: 'rohan', embedding: emb(0) }],
+    markQuestionAsked: async () => {},
     ...over,
   };
 }

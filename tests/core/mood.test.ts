@@ -44,3 +44,11 @@ describe('hidden lines written inline', () => {
       .toEqual({ reply: 'I will let Priya know.', message: 'Avni misses Rohan.' });
   });
 });
+
+describe('extractAsked', () => {
+  it('lifts the ASKED line off the reply', async () => {
+    const { extractAsked } = await import('@/core/mood');
+    expect(extractAsked('Tell me about the war?\nASKED: q1')).toEqual({ reply: 'Tell me about the war?', questionId: 'q1' });
+    expect(extractAsked('Lovely day.')).toEqual({ reply: 'Lovely day.', questionId: null });
+  });
+});
