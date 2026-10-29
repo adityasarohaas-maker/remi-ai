@@ -125,3 +125,20 @@ describe('stories', () => {
     expect(buildCompanionPrompt(base)).not.toContain('wonderful storyteller');
   });
 });
+
+describe('last wishes', () => {
+  it('helps her say it when she opens the subject, and never raises it itself', async () => {
+    const { buildCompanionPrompt, opensWishes } = await import('@/core/companion-prompt');
+    expect(opensWishes("when I'm gone, I want the house to go to Priya")).toBe(true);
+    expect(opensWishes('my funeral should be simple')).toBe(true);
+    expect(opensWishes('what a lovely morning')).toBe(false);
+    const base = {
+      preferredName: 'Avni', language: 'en-IN', about: null,
+      now: { weekday: 'Monday', prettyDate: '1 Jan', prettyTime: '9:00 am', partOfDay: 'morning' as const },
+      people: [], routine: [], primaryContactName: 'Priya', sensitive: null, safety: [],
+    };
+    expect(buildCompanionPrompt({ ...base, wishesOpen: true })).toMatch(/help (?:her|them) say it/i);
+    expect(buildCompanionPrompt({ ...base, wishesOpen: true })).toMatch(/not a (?:legal )?will/i);
+    expect(buildCompanionPrompt({ ...base })).not.toMatch(/help (?:her|them) say it/i);
+  });
+});

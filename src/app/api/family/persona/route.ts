@@ -1,4 +1,4 @@
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase/server';
+import { supabaseServer } from '@/lib/supabase/server';
 import { supabaseDeps } from '@/lib/deps';
 import { chatStream, MODELS, type ChatMessage } from '@/lib/claude';
 import { cloudVoiceConfigured, synthesize, VOICE_PER_MIN } from '@/lib/azure-tts';

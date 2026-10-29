@@ -11,3 +11,13 @@ describe('buildDigestMessages', () => {
     expect(JSON.parse(m[1].content).day).toBe('2026-10-17');
   });
 });
+
+describe('evening note and the stories of the day', () => {
+  it('tells the family which stories came up today', () => {
+    const facts = summarizeDay('2026-10-17', [], [], 'Asia/Kolkata');
+    const m = buildDigestMessages('Avni', facts, ['School by the lake', 'The rose garden']);
+    expect(m[0].content).toContain('Today Avni told me about');
+    expect(m[1].content).toContain('School by the lake');
+    expect(buildDigestMessages('Avni', facts)[0].content).not.toContain('Today Avni told me about');
+  });
+});

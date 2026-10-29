@@ -39,9 +39,17 @@ export interface CompanionPromptInput {
   steer?: Steer | null;
   /** Signs worth a look that were heard in what she just said. */
   care?: CareKind[];
+  /** She brought up what she wants after she is gone. */
+  wishesOpen?: boolean;
 }
 
 const STORY = new RegExp(String.raw`(?<![\p{L}\p{M}])(?:stor(?:y|ies)|tale|fable|kahani|kahaani|kissa|qissa|कहानी|कहानियाँ|किस्सा|cuento|historia|histoire|conte|geschichte|märchen|história|conto|قصة|حكاية|গল্প|கதை|కథ|کہانی|गोष्ट)(?![\p{L}\p{M}])|故事|物語|お話|昔話`, 'iu');
+
+const WISHES = /\b(?:when i(?:'m| am) gone|after i(?:'m| am) gone|after i die|when i die|my funeral|my last wish(?:es)?|my will|my ashes|cremat|bury me|after my death|when i pass)\b/i;
+/** She has opened the subject of what she wants after she is gone. Remi never opens it. */
+export function opensWishes(text: string): boolean {
+  return WISHES.test(text);
+}
 
 /** She is asking Remi to tell a story. */
 export function wantsStory(text: string): boolean {
@@ -133,6 +141,9 @@ Follow the family's guidance closely. Do not say that anyone has died unless the
   if (i.story && !i.safety.length) sections.push(storySection(who));
   if (i.steer && !i.safety.length && !i.story && !i.sensitive) sections.push(steerSection(who, i.steer));
   sections.push(`When ${who} says who a story is for ("only for my daughter", "after I'm gone", "give this to Riya on her wedding day"), say back in one short sentence what you understood, so she can correct you.`);
+  if (i.wishesOpen && !i.safety.length) {
+    sections.push(`${who} is talking about what she wants after she is gone: her funeral, her things, who should have what, what she wants said. This matters to her. Listen, and help her say it: ask one gentle question at a time (what, for whom, why it matters), repeat back what you understood, and never steer away or change the subject. Do not be sad or dramatic; be steady and kind. What she says is kept for her family in her own words; it is not a legal will, and you do not say that it is.`);
+  }
   if (i.careType === 'dementia') {
     sections.push(`${who} lives with dementia. Never correct her memories; if a story changes between tellings, just listen. If she seems low or lost, you may offer: "Would you like to hear one of your own stories? Tap My stories."`);
   }
