@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const now = deps.now();
   const [ctx, consent] = await Promise.all([
     deps.loadContext(householdId, now),
-    supabaseAdmin().from('consents').select('record_voice').eq('household_id', householdId).maybeSingle(),
+    supabaseAdmin().from('consents').select('record_voice, decided_at').eq('household_id', householdId).maybeSingle(),
   ]);
   // ?lang= is the language picked on the tablet: the day and date read in it
   const asked = new URL(req.url).searchParams.get('lang') ?? '';
@@ -23,5 +23,7 @@ export async function GET(req: Request) {
     items: reminderStates(ctx.routine, ctx.doneIds, local.minutes),
     // false once she has asked Remi to stop keeping her voice
     recordVoice: consent.data?.record_voice !== false,
+    // nobody has decided yet: Remi asks her when the tablet starts
+    consentPending: !consent.data?.decided_at,
   });
 }

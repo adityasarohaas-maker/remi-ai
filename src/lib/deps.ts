@@ -145,6 +145,11 @@ export function supabaseDeps(): CoreDeps {
 
     alert: sendAlert,
 
+    async setRecordVoice(householdId, on) {
+      const { error } = await db.from('consents').upsert({ household_id: householdId, record_voice: on }, { onConflict: 'household_id' });
+      if (error) console.error('setRecordVoice failed', error);
+    },
+
     async markQuestionAsked(questionId) {
       const { error } = await db.from('family_questions').update({ status: 'asked', asked_at: new Date().toISOString() })
         .eq('id', questionId).eq('status', 'pending');

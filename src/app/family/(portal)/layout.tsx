@@ -3,7 +3,7 @@ import { requireFamily } from '@/lib/household';
 
 const NAV = [
   ['/family', 'Today'], ['/family/story', 'Story'], ['/family/questions', 'Questions'], ['/family/photos', 'Photos'], ['/family/people', 'People'],
-  ['/family/routine', 'Routine'], ['/family/guidance', 'Hard questions'], ['/family/tablet', 'Tablet'], ['/family/members', 'Members'], ['/family/profile', 'Profile'],
+  ['/family/routine', 'Routine'], ['/family/guidance', 'Hard questions'], ['/family/tablet', 'Tablet'], ['/family/members', 'Members'], ['/family/consent', 'Her say'], ['/family/profile', 'Profile'],
 ] as const;
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {

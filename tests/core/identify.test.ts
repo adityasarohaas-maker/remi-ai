@@ -21,6 +21,7 @@ function deps(over: Partial<CoreDeps> = {}): CoreDeps {
     alert: async () => {},
     faceGallery: async () => [{ personId: 'rohan', embedding: emb(0) }],
     markQuestionAsked: async () => {},
+    setRecordVoice: async () => {},
     ...over,
   };
 }

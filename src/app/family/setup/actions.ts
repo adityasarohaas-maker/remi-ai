@@ -14,9 +14,13 @@ export async function createHousehold(form: FormData) {
   const tzInput = field(form, 'timezone', 60);
   const timezone = isValidTimeZone(tzInput) ? tzInput : DEFAULT_TIME_ZONE;
   if (!patientName) return;
-  const { error } = await sb.rpc('create_household', {
+  const careRaw = field(form, 'care_type', 10);
+  const careType = careRaw === 'dementia' || careRaw === 'terminal' ? careRaw : 'elderly';
+  const { data: id, error } = await sb.rpc('create_household', {
     p_patient_name: patientName, p_preferred_name: preferredName, p_language: language, p_timezone: timezone,
   });
   if (error && !error.message.includes('already in a household')) throw new Error(error.message);
-  redirect('/family');
+  if (id) await sb.from('households').update({ care_type: careType }).eq('id', id as string);
+  // her say over her voice comes next, before the first conversation
+  redirect('/family/consent');
 }

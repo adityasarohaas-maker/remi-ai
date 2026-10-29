@@ -88,7 +88,7 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
     setScreen(s);
   }, []);
 
-  const remi = useRemi({ api, language, preferredName, people, markDone, go, cloudVoice, recordVoice: today?.recordVoice ?? true, turnContext });
+  const remi = useRemi({ api, language, preferredName, people, markDone, go, cloudVoice, recordVoice: today?.recordVoice ?? true, consentPending: today?.consentPending ?? false, turnContext });
 
   const due = today?.items.find((i) => i.state === 'due');
   useEffect(() => {

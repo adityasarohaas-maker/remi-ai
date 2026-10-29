@@ -28,6 +28,7 @@ function makeDeps(over: Partial<CoreDeps> = {}) {
     alert: async (_h, reason, detail) => { alerts.push({ reason, detail }); },
     faceGallery: async () => [],
     markQuestionAsked: async () => {},
+    setRecordVoice: async () => {},
     ...over,
   };
   return { deps, logged, alerts, chat };
@@ -361,7 +362,19 @@ describe('handleTalk on the photo screen', () => {
   it('tells Remi about the photo even if it steered a moment ago', async () => {
     const { deps, chat } = makeDeps({ loadContext: async () => ({ ...ctx, lastSteerAt: new Date('2026-10-17T07:39:00Z') }) });
     await handleTalk(deps, { householdId: 'h1', text: 'Look at this one.', photo: { id: 'ph1', note: 'Wedding, 1968' } });
-    const system = (chat.mock.calls[0][0] as unknown as { role: string; content: string }[])[0].content;
+    const system = (chat.mock.calls[0] as unknown as [{ role: string; content: string }[]])[0][0].content;
     expect(system).toContain('Wedding, 1968');
+  });
+});
+
+describe('handleTalk and her consent', () => {
+  it('stops keeping her voice when she asks, tells the family, and says so without the model', async () => {
+    const flags: boolean[] = [];
+    const { deps, alerts, chat } = makeDeps({ setRecordVoice: async (_h, on) => { flags.push(on); } });
+    const r = await handleTalk(deps, { householdId: 'h1', text: 'Please stop recording me now.' });
+    expect(flags).toEqual([false]);
+    expect(alerts.some((a) => a.reason === 'message')).toBe(true);
+    expect(chat).not.toHaveBeenCalled();
+    expect(r.body.reply).toMatch(/won't keep/i);
   });
 });

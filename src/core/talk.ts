@@ -11,6 +11,7 @@ import { detectSafetyWords } from './safety';
 import { findSensitiveGuidance } from './sensitive';
 import { parseMoodTag, extractTellFamily, extractAsked, type Mood } from './mood';
 import { pickSteer } from './story-steer';
+import { wantsToStopRecording, STOPPED_KEEPING } from './consent';
 import { buildCompanionPrompt, languageName, wantsStory } from './companion-prompt';
 import { fallbackReply, helpSentMessage, timeAnswer } from './messages';
 import { worthJoining, JOIN_IN_COOLDOWN_SECONDS } from './listening';
@@ -37,6 +38,8 @@ export interface CoreDeps {
   faceGallery(householdId: string): Promise<FaceSample[]>;
   /** Remi raised this family question in conversation. */
   markQuestionAsked(questionId: string): Promise<void>;
+  /** She told Remi to stop (or start again) keeping her voice. */
+  setRecordVoice(householdId: string, on: boolean): Promise<void>;
 }
 
 export type TalkMode = 'addressed' | 'followup' | 'overheard';
@@ -73,6 +76,14 @@ export async function handleTalk(deps: CoreDeps, input: {
   const alerts: Promise<void>[] = [];
   if (safety.length && (await deps.takeRateToken(householdId, 'safety-alert', SAFETY_ALERTS_PER_MIN, 60))) {
     alerts.push(deps.alert(householdId, 'safety', `${h.preferredName} said: "${text}" (${safety.join(', ')})`));
+  }
+
+  // Her say over her own voice comes before anything else, and needs no model.
+  if (input.mode !== 'overheard' && !safety.length && wantsToStopRecording(text)) {
+    await Promise.allSettled([deps.setRecordVoice(householdId, false), deps.alert(householdId, 'message', `${h.preferredName} asked Remi to stop keeping her voice and her words.`)]);
+    const reply = STOPPED_KEEPING(h.preferredName);
+    await deps.logEvent(householdId, 'consent', { answer: 'no', said: text });
+    return { status: 200, body: { reply, mood: 'unknown' as Mood, alerted: true } };
   }
 
   // Overheard speech: Remi stays out of ordinary chatter, joins in rarely, and never saves what it ignores.

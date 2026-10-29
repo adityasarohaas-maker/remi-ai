@@ -10,6 +10,7 @@ import { labelsFor } from './labels';
 import type { Api } from './patient-app';
 
 import { createRecorder, type Recorder } from './recorder';
+import { consentQuestion, parseConsentAnswer, CONSENT_THANKS, CONSENT_DECLINED } from '@/core/consent';
 
 export type RemiStatus = 'off' | 'listening' | 'hearing' | 'thinking' | 'speaking' | 'blocked' | 'unsupported';
 export type RemiPerson = { name: string; relation: string; isDeceased: boolean };
@@ -40,6 +41,8 @@ export function useRemi(o: {
   recordVoice?: boolean;
   /** What is on screen as she talks: the photo she is looking at, the person Remi just recognised. */
   turnContext?: { photoId: string | null; personName: string | null };
+  /** Nobody has said yet whether Remi may keep her voice: Remi asks her at the start. */
+  consentPending?: boolean;
 }) {
   const t = labelsFor(o.language);
   const [status, setStatus] = useState<RemiStatus>('off');
@@ -77,6 +80,7 @@ export function useRemi(o: {
   const recorder = useRef<Recorder | null>(null);
   // A conversation is over once she has been quiet for a while: then Remi keeps what she told it.
   const endTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const awaitingConsent = useRef(false); // Remi just asked whether it may keep her voice
   const asking = useRef('');          // what she asked for the reply in progress
   const lastSpokeAt = useRef(0);
   const lastWarm = useRef(0);
@@ -287,6 +291,21 @@ export function useRemi(o: {
     }
     if (h.kind === 'ignore') { idle(); return; }
     note(raw, h.kind === 'wake' ? 'wake word' : `${h.kind}`);
+
+    // Her answer to Remi's one question, before anything else. Unclear words: Remi asks once more.
+    if (awaitingConsent.current && h.kind !== 'overheard' && h.kind !== 'wake') {
+      const answer = parseConsentAnswer(h.text);
+      const clip = recorder.current?.stop() ?? Promise.resolve(null);
+      clip.catch(() => {});
+      setHeard(h.text);
+      if (answer === 'unclear') { await say(consentQuestion(preferredName)); return; }
+      awaitingConsent.current = false;
+      const recordingId = answer === 'yes' && typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : undefined;
+      if (recordingId) await keepClip(recordingId, clip, h.text);
+      latest.current.api('consent', { method: 'POST', body: JSON.stringify({ answer, recordingId, said: h.text }) }).catch(() => {});
+      await say(answer === 'yes' ? CONSENT_THANKS(preferredName) : CONSENT_DECLINED(preferredName));
+      return;
+    }
     if (h.kind === 'wake') { setHeard(raw); gesture('hop'); await say(wakeReply(language, preferredName)); return; }
 
     if (h.kind === 'addressed' || h.kind === 'followup') {
@@ -397,6 +416,10 @@ export function useRemi(o: {
     checkInAfterMs.current = quiet > 0 ? quiet * 60_000 : undefined;
     feel({ event: 'greeting' });
     await say(t.intro(latest.current.preferredName));
+    if (latest.current.consentPending) {
+      awaitingConsent.current = true;
+      await say(consentQuestion(latest.current.preferredName));
+    }
   }, [say, t, feel, makeListener]);
 
   // A new language from the 🌐 button: listen in it from now on.

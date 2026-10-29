@@ -16,6 +16,12 @@ export default async function SetupPage() {
         <label className="block">Full name<input name="patient_name" required className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
         <label className="block">What they like to be called<input name="preferred_name" placeholder="e.g. Avni, Nani" className="mt-1 w-full rounded-lg border px-4 py-3" /></label>
         <LocaleFields />
+        <fieldset className="rounded-xl border p-4">
+          <legend className="px-1">What brings you to Remi?</legend>
+          <label className="flex items-center gap-2"><input type="radio" name="care_type" value="elderly" defaultChecked /> They&apos;re getting older, and we want to keep their stories</label>
+          <label className="mt-1 flex items-center gap-2"><input type="radio" name="care_type" value="dementia" /> They&apos;re living with dementia</label>
+          <label className="mt-1 flex items-center gap-2"><input type="radio" name="care_type" value="terminal" /> A serious illness; time may be short</label>
+        </fieldset>
         <button className="rounded-lg bg-garden px-5 py-3 text-white">Continue</button>
       </form>
     </main>

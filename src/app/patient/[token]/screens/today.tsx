@@ -5,6 +5,7 @@ export type TodayData = {
   now: { weekday: string; prettyDate: string; prettyTime: string; partOfDay: string; night?: boolean };
   items: { id: string; label: string; kind: string; minutes: number; state: 'upcoming' | 'due' | 'done' | 'missed'; spokenMessage: string | null }[];
   recordVoice?: boolean;
+  consentPending?: boolean;
 };
 
 function clock(minutes: number): string {
