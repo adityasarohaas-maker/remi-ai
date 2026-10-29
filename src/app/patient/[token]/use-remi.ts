@@ -21,6 +21,7 @@ const SETTLE_MS = 500;            // live words unchanged this long = she has fi
 
 /** The orb listens for these instead of re-rendering on every word. */
 export const REMI_BEAT = 'remi-beat';
+const CONVERSATION_END_MS = 3 * 60_000;
 const beat = (kind: 'word' | 'hear') => window.dispatchEvent(new CustomEvent(REMI_BEAT, { detail: kind }));
 /** A clip of Remi's voice that came inside the reply stream (base64). */
 const mp3 = (base64: string) => new Blob([Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))], { type: 'audio/mpeg' });
@@ -72,6 +73,8 @@ export function useRemi(o: {
   const talkAbort = useRef<AbortController | null>(null);
   // Her voice: recorded while she speaks, uploaded once Remi has answered. Never for speech Remi ignored.
   const recorder = useRef<Recorder | null>(null);
+  // A conversation is over once she has been quiet for a while: then Remi keeps what she told it.
+  const endTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const asking = useRef('');          // what she asked for the reply in progress
   const lastSpokeAt = useRef(0);
   const lastWarm = useRef(0);
@@ -313,6 +316,10 @@ export function useRemi(o: {
       if (turn.current !== startTurn) { note(h.text, 'interrupted'); return; } // she cut in; her new words get the answer
       const answer = result.text;
       if (answer && recordingId) void keepClip(recordingId, clip, h.text);
+      if (answer && h.kind !== 'overheard') {
+        if (endTimer.current) clearTimeout(endTimer.current);
+        endTimer.current = setTimeout(() => { latest.current.api('conversation-end', { method: 'POST' }).catch(() => {}); }, CONVERSATION_END_MS);
+      }
       note(h.text, answer ? `replied (${h.kind})` : `stayed quiet (${h.kind})`);
       if (answer) {
         feel({ mood: result.mood, reply: answer });
