@@ -66,6 +66,13 @@ export function createRecorder(env: Env = browserEnv()) {
         try { r.stop(); } catch { finish(); }
       });
     },
+    /** Ends the clip and throws it away: speech Remi ignored is never kept. */
+    discard(): void {
+      const r = rec;
+      rec = null;
+      chunks = [];
+      if (r && r.state !== 'inactive') { r.ondataavailable = null; r.onstop = null; try { r.stop(); } catch { /* already stopped */ } }
+    },
     recording(): boolean { return !!rec && rec.state === 'recording'; },
   };
 }

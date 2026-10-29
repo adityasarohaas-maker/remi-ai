@@ -32,3 +32,19 @@ describe('createRecorder', () => {
     await expect(r.start()).resolves.toBe(false);
   });
 });
+
+describe('createRecorder discard', () => {
+  it('throws away a clip that was never meant to be kept', async () => {
+    class FakeRecorder {
+      state = 'inactive'; ondataavailable: ((e: { data: Blob }) => void) | null = null; onstop: (() => void) | null = null; onerror: (() => void) | null = null; mimeType = 'audio/webm';
+      static isTypeSupported() { return true; }
+      start() { this.state = 'recording'; this.ondataavailable?.({ data: new Blob(['x']) }); }
+      stop() { this.state = 'inactive'; this.onstop?.(); }
+    }
+    const r = createRecorder({ getUserMedia: async () => ({} as MediaStream), MediaRecorder: FakeRecorder as unknown as typeof MediaRecorder });
+    expect(await r.start()).toBe(true);
+    r.discard();
+    expect(r.recording()).toBe(false);
+    expect(await r.stop()).toBeNull();
+  });
+});

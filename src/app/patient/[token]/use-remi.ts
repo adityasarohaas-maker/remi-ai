@@ -10,6 +10,7 @@ import { labelsFor } from './labels';
 import type { Api } from './patient-app';
 
 import { createRecorder, type Recorder } from './recorder';
+import { MAX_CLIP_BYTES } from '@/core/recording';
 import { consentQuestion, parseConsentAnswer, CONSENT_THANKS, CONSENT_DECLINED } from '@/core/consent';
 
 export type RemiStatus = 'off' | 'listening' | 'hearing' | 'thinking' | 'speaking' | 'blocked' | 'unsupported';
@@ -156,7 +157,7 @@ export function useRemi(o: {
   const keepClip = useCallback(async (id: string, clip: Promise<Blob | null>, transcript: string) => {
     try {
       const audio = await clip;
-      if (!audio) return;
+      if (!audio || audio.size > MAX_CLIP_BYTES) return; // too long to be one turn: the server would refuse it
       const form = new FormData();
       form.set('id', id);
       form.set('audio', audio, 'turn.webm');
@@ -289,7 +290,7 @@ export function useRemi(o: {
       armed.current = false;
       if (h.kind === 'followup' || h.kind === 'overheard') h = { kind: 'addressed', text: h.text };
     }
-    if (h.kind === 'ignore') { idle(); return; }
+    if (h.kind === 'ignore') { recorder.current?.discard(); idle(); return; } // never kept
     note(raw, h.kind === 'wake' ? 'wake word' : `${h.kind}`);
 
     // Her answer to Remi's one question, before anything else. Unclear words: Remi asks once more.
@@ -306,7 +307,7 @@ export function useRemi(o: {
       await say(answer === 'yes' ? CONSENT_THANKS(preferredName) : CONSENT_DECLINED(preferredName));
       return;
     }
-    if (h.kind === 'wake') { setHeard(raw); gesture('hop'); await say(wakeReply(language, preferredName)); return; }
+    if (h.kind === 'wake') { recorder.current?.discard(); setHeard(raw); gesture('hop'); await say(wakeReply(language, preferredName)); return; }
 
     if (h.kind === 'addressed' || h.kind === 'followup') {
       const command = voiceCommand(h.text);
@@ -325,7 +326,8 @@ export function useRemi(o: {
     busy.current = true;
     asking.current = h.text;
     // the clip of what she just said; named now so the turn and the clip share an id
-    const clip = recorder.current?.stop() ?? Promise.resolve(null);
+    if (h.kind === 'overheard') recorder.current?.discard(); // overheard chatter is never saved
+    const clip = h.kind === 'overheard' ? Promise.resolve(null) : recorder.current?.stop() ?? Promise.resolve(null);
     clip.catch(() => {});
     const recordingId = h.kind !== 'overheard' && latest.current.recordVoice !== false && typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : undefined;
     const previous = { you: heard, remi: reply };

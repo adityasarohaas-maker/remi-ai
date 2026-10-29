@@ -19,7 +19,7 @@ export async function generateDigest(householdId: string, dayArg?: string) {
   const { data: events } = await db.from('events').select('type, payload, created_at')
     .eq('household_id', householdId).gte('created_at', start.toISOString()).lt('created_at', end.toISOString())
     .order('created_at').limit(2000);
-  const { data: told } = await db.from('memories').select('title').eq('household_id', householdId)
+  const { data: told } = await db.from('memories').select('title').eq('household_id', householdId).eq('visibility', 'everyone')
     .gte('created_at', start.toISOString()).lt('created_at', end.toISOString()).order('created_at').limit(12);
   const storiesToday = (told ?? []).map((m) => m.title as string);
   const minutes = day === local.day ? local.minutes : 24 * 60;

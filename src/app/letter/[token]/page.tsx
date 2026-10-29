@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { hashDeviceToken } from '@/lib/device-token';
 import { signedRecordingUrl } from '@/lib/clips';
+import { letterLinkState } from '@/core/letters';
 
 /** A letter she left for someone who may have no account: reached by a private link that was emailed to them. */
 export default async function LetterPage({ params }: { params: Promise<{ token: string }> }) {
@@ -11,15 +12,16 @@ export default async function LetterPage({ params }: { params: Promise<{ token: 
       .eq('token_hash', hashDeviceToken(token)).maybeSingle()
     : { data: null };
   const memory = link?.memory as unknown as { id: string; title: string; quote: string; translation: string | null; summary: string; recording_id: string | null; recipient_name: string | null; opened_at: string | null; household: { preferred_name: string } | null } | null;
-  if (!link || !memory || !memory.opened_at || new Date(link.expires_at) < new Date()) {
+  const state = link ? letterLinkState({ expiresAt: link.expires_at as string, usedAt: link.used_at as string | null }, new Date()) : 'expired';
+  if (!link || !memory || !memory.opened_at || state === 'expired') {
     return (
       <main className="mx-auto max-w-lg px-4 py-16">
         <h1 className="text-2xl font-semibold">This link has expired</h1>
-        <p className="mt-3 text-stone-600">Letters open on their day and the link lasts thirty days. Ask the family for a new one.</p>
+        <p className="mt-3 text-stone-600">A letter link opens once, and stays open for a day after that. Ask the family for a new one.</p>
       </main>
     );
   }
-  if (!link.used_at) await db.from('letter_links').update({ used_at: new Date().toISOString() }).eq('id', link.id);
+  if (state === 'fresh') await db.from('letter_links').update({ used_at: new Date().toISOString() }).eq('id', link.id);
   const clip = memory.recording_id ? await signedRecordingUrl(memory.recording_id) : null;
   const name = memory.household?.preferred_name ?? '';
 

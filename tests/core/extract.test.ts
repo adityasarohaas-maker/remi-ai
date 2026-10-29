@@ -61,3 +61,15 @@ describe('buildExtractionPrompt', () => {
     expect(text).toContain('[0]');
   });
 });
+
+describe('sealedTurnIndexes', () => {
+  it('names the turns whose words must leave the shared transcript', async () => {
+    const { sealedTurnIndexes } = await import('@/core/extract');
+    expect(sealedTurnIndexes([
+      draft({ turnIndexes: [0], visibility: 'everyone' }),
+      draft({ turnIndexes: [1, 2], visibility: 'remi_only' }),
+      draft({ turnIndexes: [2, 3], visibility: 'members', forNames: ['Priya'] }),
+      draft({ turnIndexes: [4], visibility: 'everyone', forNames: ['Priya'] }),
+    ])).toEqual([1, 2, 3, 4]);
+  });
+});

@@ -8,7 +8,7 @@ import embeddings from '@/demo/embeddings.json';
 import demoMemories from '@/demo/memories.json';
 import type { LifeStage, MemoryKind, Visibility } from '@/core/types';
 
-import { DEMO_HOUSEHOLD_ID } from '@/core/demo';
+import { DEMO_HOUSEHOLD_ID, demoStableId as stableId } from '@/core/demo';
 
 export { DEMO_HOUSEHOLD_ID };
 const TZ = 'Asia/Kolkata';
@@ -19,8 +19,6 @@ type DemoMemory = {
   confidence?: 'sure' | 'unsure'; visibility?: Visibility; forNames?: string[]; openEvent?: string; recipientName?: string;
 };
 
-// Stable ids, so the clips and photos uploaded once from a laptop survive every nightly reset on Vercel.
-const stableId = (n: number, kind: 'c' | 'p') => `00000000-0000-4000-8000-0000000${kind === 'c' ? '0c' : '0d'}${String(n).padStart(2, '0')}`;
 const CLIP_EXTS = ['.mp3', '.m4a', '.webm', '.ogg'];
 const MIME: Record<string, string> = { '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.webm': 'audio/webm', '.ogg': 'audio/ogg' };
 
@@ -162,7 +160,7 @@ export async function seedDemo(): Promise<void> {
     if (!(await ensureObject(db, 'family-media', path, join(photosDir, p.file), 'image/svg+xml'))) continue;
     photoRows.push({ id: stableId(i, 'p'), household_id: DEMO_HOUSEHOLD_ID, storage_path: path, note: p.note, year: p.year, uploaded_by: priyaId, shown_at: i < 2 ? new Date(Date.now() - (10 - i) * 86_400_000).toISOString() : null, created_at: new Date(Date.now() - 20 * 86_400_000).toISOString() });
   }
-  if (photoRows.length) await db.from('photos').insert(photoRows);
+  if (photoRows.length) { const { error } = await db.from('photos').insert(photoRows); if (error) throw error; }
   const photoByKey: Record<string, string> = { 'wedding-day': stableId(0, 'p'), 'thirty-one-years': stableId(1, 'p') };
 
   // the family's questions: one Remi has yet to ask, one Avni answered

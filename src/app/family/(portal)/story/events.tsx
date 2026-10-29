@@ -1,4 +1,5 @@
-import { markEventHappened, addRecipientEmail, newLetterLink } from './actions';
+import { markEventHappened, addRecipientEmail } from './actions';
+import { LetterLinkButton } from './letter-link-button';
 import type { MemoryRule } from '@/core/types';
 import { sealedLabel } from '@/core/visibility';
 
@@ -29,9 +30,7 @@ export function ComingLater({ sealed, events, names, admin, name }: {
                 <button className="rounded-lg bg-garden px-3 py-1 text-white">Save</button>
               </form>
             )}
-            {admin && s.openedAt && s.recipientName && (
-              <form action={newLetterLink}><input type="hidden" name="id" value={s.id} /><button className="text-garden underline">Make a link to send</button></form>
-            )}
+            {admin && s.openedAt && s.recipientName && !s.visibleTo.length && <LetterLinkButton memoryId={s.id} />}
           </li>
         ))}
         {!sealed.length && <li className="px-4 py-3 text-sm text-stone-500">Nothing sealed.</li>}

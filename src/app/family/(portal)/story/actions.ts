@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { signedClipUrl } from '@/lib/clips';
 import { openDueLetters, makeLetterLink } from '@/lib/letters';
 import { field } from '@/lib/form';
+import { canMakeLetterLink } from '@/core/letters';
 
 /** A link to hear her tell it; null when there is no clip or it isn't theirs to hear. */
 export async function playClip(memoryId: string): Promise<string | null> {
@@ -31,22 +32,29 @@ export async function markEventHappened(form: FormData) {
   revalidatePath('/family/story');
 }
 
+type LetterRow = { id: string; opened_at: string | null; visible_to: string[]; recipient_name: string | null };
+async function letterFor(householdId: string, id: string): Promise<LetterRow | null> {
+  if (!id) return null;
+  const { data } = await supabaseAdmin().from('memories').select('id, opened_at, visible_to, recipient_name').eq('id', id).eq('household_id', householdId).maybeSingle();
+  return (data as LetterRow | null) ?? null;
+}
+
+/** An address for a letter to someone outside the family. Only the address changes; the words stay sealed. */
 export async function addRecipientEmail(form: FormData) {
   const { householdId } = await requireAdmin();
   const id = field(form, 'id', 64);
   const email = field(form, 'email', 120).toLowerCase();
-  if (!id || !email.includes('@')) return;
-  // the memory is sealed, so the family can't read it; only the address changes, through the server
-  await supabaseAdmin().from('memories').update({ recipient_email: email }).eq('id', id).eq('household_id', householdId);
+  if (!email.includes('@')) return;
+  const m = await letterFor(householdId, id);
+  if (!m || !m.recipient_name || (m.visible_to ?? []).length) return;
+  await supabaseAdmin().from('memories').update({ recipient_email: email }).eq('id', id);
   revalidatePath('/family/story');
 }
 
-export async function newLetterLink(form: FormData): Promise<void> {
+/** A link to hand on by other means. Shown once to the admin who asked; never stored anywhere the family can read. */
+export async function newLetterLink(memoryId: string): Promise<string | null> {
   const { householdId } = await requireAdmin();
-  const id = field(form, 'id', 64);
-  const { data } = await supabaseAdmin().from('memories').select('id, opened_at').eq('id', id).eq('household_id', householdId).maybeSingle();
-  if (!data?.opened_at) return;
-  const link = await makeLetterLink(id);
-  await supabaseAdmin().from('events').insert({ household_id: householdId, type: 'letter_link', payload: { memoryId: id, link } });
-  revalidatePath('/family/story');
+  const m = await letterFor(householdId, typeof memoryId === 'string' ? memoryId.slice(0, 64) : '');
+  if (!m || !canMakeLetterLink({ visibleTo: m.visible_to ?? [], recipientName: m.recipient_name, openedAt: m.opened_at })) return null;
+  return makeLetterLink(m.id);
 }

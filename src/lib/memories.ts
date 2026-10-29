@@ -2,7 +2,7 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { chatJson, MODELS } from '@/lib/claude';
 import { sendEmail, escapeHtml } from '@/lib/email';
-import { buildExtractionPrompt, draftToRow, ExtractionSchema, type Turn } from '@/core/extract';
+import { buildExtractionPrompt, draftToRow, sealedTurnIndexes, ExtractionSchema, type Turn } from '@/core/extract';
 import type { CareType } from '@/core/types';
 
 const MIN_TURNS = 2;
@@ -81,6 +81,15 @@ export async function extractNewMemories(householdId: string): Promise<{ created
       void sendEmail(asker.email as string, `${h.preferred_name} answered your question`,
         `<p>${escapeHtml(h.preferred_name as string)} told Remi about: <b>${escapeHtml(q?.question as string)}</b>.</p><p>Listen in the family portal, under Story.</p>`);
     }
+  }
+
+  // what she kept for someone in particular, or for Remi alone, must not stay readable as a transcript
+  const eventIds = ((events ?? []) as ConversationEvent[]).filter((e) => typeof e.payload.text === 'string' && typeof e.payload.reply === 'string' && !e.payload.fallback).map((e) => e.id);
+  for (const i of sealedTurnIndexes(out.memories)) {
+    const eid = eventIds[i];
+    const ev = ((events ?? []) as ConversationEvent[]).find((e) => e.id === eid);
+    if (!ev) continue;
+    await db.from('events').update({ payload: { ...ev.payload, text: '[kept privately by Remi]', reply: '[kept privately by Remi]', sealed: true } }).eq('id', eid);
   }
 
   await db.from('households').update({ extracted_through: through }).eq('id', householdId);

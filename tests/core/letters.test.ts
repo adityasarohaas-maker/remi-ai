@@ -28,3 +28,25 @@ describe('dueToOpen', () => {
     expect(letterExpiry(new Date('2026-10-29T00:00:00Z')).toISOString()).toBe('2026-11-28T00:00:00.000Z');
   });
 });
+
+describe('canMakeLetterLink', () => {
+  it('only for an opened letter addressed to someone without an account', async () => {
+    const { canMakeLetterLink } = await import('@/core/letters');
+    expect(canMakeLetterLink({ visibleTo: [], recipientName: 'Riya', openedAt: '2026-10-20T00:00:00Z' })).toBe(true);
+    expect(canMakeLetterLink({ visibleTo: ['priya'], recipientName: 'Riya', openedAt: '2026-10-20T00:00:00Z' })).toBe(false);
+    expect(canMakeLetterLink({ visibleTo: [], recipientName: null, openedAt: '2026-10-20T00:00:00Z' })).toBe(false);
+    expect(canMakeLetterLink({ visibleTo: [], recipientName: 'Riya', openedAt: null })).toBe(false);
+  });
+});
+
+describe('letterLinkState', () => {
+  it('is single-use, with a day to come back to it, then expired', async () => {
+    const { letterLinkState, LETTER_REOPEN_HOURS } = await import('@/core/letters');
+    expect(LETTER_REOPEN_HOURS).toBe(24);
+    const now = new Date('2026-11-01T12:00:00Z');
+    expect(letterLinkState({ expiresAt: '2026-11-20T00:00:00Z', usedAt: null }, now)).toBe('fresh');
+    expect(letterLinkState({ expiresAt: '2026-11-20T00:00:00Z', usedAt: '2026-11-01T10:00:00Z' }, now)).toBe('open');
+    expect(letterLinkState({ expiresAt: '2026-11-20T00:00:00Z', usedAt: '2026-10-30T10:00:00Z' }, now)).toBe('expired');
+    expect(letterLinkState({ expiresAt: '2026-10-31T00:00:00Z', usedAt: null }, now)).toBe('expired');
+  });
+});

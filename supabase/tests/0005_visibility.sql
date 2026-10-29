@@ -25,6 +25,7 @@ insert into public.memories (id, household_id, title, summary, quote, visibility
   ('00000000-0000-4000-8000-0000000000d7', '00000000-0000-4000-8000-0000000000f1', 'remi only', 's', 'q', 'remi_only', '{}', null, null);
 
 create temp table seen (who text, n int);
+grant insert on seen to authenticated;
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated"}', true);
@@ -33,6 +34,20 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000
 insert into seen select 'arjun living', count(*) from public.memories;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a3","role":"authenticated"}', true);
 insert into seen select 'stranger', count(*) from public.memories;
+-- a family member may not mark her passed
+do $$
+begin
+  set local role authenticated;
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a2","role":"authenticated"}', true);
+  begin
+    update public.households set status = 'passed' where id = '00000000-0000-4000-8000-0000000000f1';
+    raise exception 'family member changed status';
+  exception when others then
+    if sqlerrm = 'family member changed status' then raise; end if;
+    raise notice 'family member blocked: %', sqlerrm;
+  end;
+  reset role;
+end $$;
 reset role;
 
 update public.households set status = 'passed' where id = '00000000-0000-4000-8000-0000000000f1';

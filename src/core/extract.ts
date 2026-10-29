@@ -78,6 +78,16 @@ Rules:
   ];
 }
 
+/** Turns whose words became a memory not for everyone: their text leaves the member-readable transcript. */
+export function sealedTurnIndexes(drafts: MemoryDraft[]): number[] {
+  const out = new Set<number>();
+  for (const d of drafts) {
+    if (d.visibility === 'everyone' && !d.forNames.length) continue;
+    for (const i of d.turnIndexes) out.add(i);
+  }
+  return [...out].sort((a, b) => a - b);
+}
+
 export interface MemoryRow {
   household_id: string; title: string; summary: string; quote: string; language: string; translation: string | null;
   recording_id: string | null; life_stage: LifeStage; year_from: number | null; year_to: number | null;

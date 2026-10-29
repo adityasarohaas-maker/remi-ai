@@ -48,7 +48,7 @@ export async function openDueLetters(householdId: string): Promise<{ opened: num
       const token = newDeviceToken();
       await db.from('letter_links').insert({ memory_id: r.id, token_hash: hashDeviceToken(token), expires_at: letterExpiry(now).toISOString() });
       await sendEmail(r.recipient_email, subject,
-        `<p>${escapeHtml(r.recipient_name ?? '')}, ${escapeHtml(name)} left you a letter, in her own voice.</p><p><a href="${baseUrl()}/letter/${token}">Open it</a> (the link lasts ${30} days).</p>`);
+        `<p>${escapeHtml(r.recipient_name ?? '')}, ${escapeHtml(name)} left you a letter, in her own voice.</p><p><a href="${baseUrl()}/letter/${token}">Open it</a>. The link opens once and stays open for a day; ask the family for another if you need it.</p>`);
     }
   }
   return { opened };

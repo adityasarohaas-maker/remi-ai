@@ -208,6 +208,21 @@ $$;
 revoke all on function public.count_sealed(uuid) from public, anon;
 grant execute on function public.count_sealed(uuid) to authenticated;
 
+-- only owners and admins may change what the household is or whether she has passed (the UI checks too; this is the law)
+create or replace function public.guard_household_columns() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if (select auth.uid()) is null then return new; end if; -- the server (service role) is trusted
+  if (new.status, new.passed_on, new.passed_marked_at, new.is_demo, new.extracted_through, new.care_type)
+     is distinct from (old.status, old.passed_on, old.passed_marked_at, old.is_demo, old.extracted_through, old.care_type)
+     and not public.is_admin(old.id) then
+    raise exception 'only an owner or admin may change this';
+  end if;
+  return new;
+end $$;
+create trigger households_guard before update on public.households
+  for each row execute function public.guard_household_columns();
+
 -- ---------- row level security ----------
 alter table public.invites enable row level security;
 alter table public.recordings enable row level security;
