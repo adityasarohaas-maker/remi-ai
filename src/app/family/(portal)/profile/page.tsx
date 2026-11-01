@@ -23,8 +23,8 @@ export default async function ProfilePage() {
   return (
     <>
     <section className="max-w-xl">
-      <h1 className="text-2xl font-semibold">Profile</h1>
-      <p className="mt-1 text-stone-600">{h.patient_name}</p>
+      <h1 className="f-h1">Profile</h1>
+      <p className="mt-1 text-dim">{h.patient_name}</p>
       <form action={saveProfile} className="mt-6 space-y-4">
         <label className="block">What they like to be called<input name="preferred_name" defaultValue={h.preferred_name} className={input} /></label>
         <LocaleFields language={h.language} timezone={h.timezone} locked={isDemoHousehold(householdId)} />
@@ -36,9 +36,9 @@ export default async function ProfilePage() {
         <label className="block">Main family contact (phone)<input name="primary_contact_phone" type="tel" defaultValue={h.primary_contact_phone ?? ''} className={input} /></label>
         <label className="block">Telegram chat id for alerts
           <input name="telegram_chat_id" defaultValue={h.telegram_chat_id ?? ''} className={input} />
-          <span className="mt-1 block text-sm text-stone-500">Message your family&apos;s Remi bot once, then ask @userinfobot for your chat id.</span>
+          <span className="mt-1 block text-sm text-dim">Message your family&apos;s Remi bot once, then ask @userinfobot for your chat id.</span>
         </label>
-        <button className="rounded-lg bg-garden px-5 py-3 text-white">Save</button>
+        <button className="rounded-lg bg-garden px-5 py-3 text-night">Save</button>
       </form>
     </section>
     <CareContacts contacts={(contacts ?? []) as { id: string; name: string; email: string }[]} admin={canAdmin(role)} />

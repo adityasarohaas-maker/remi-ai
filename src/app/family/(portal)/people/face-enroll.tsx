@@ -35,11 +35,11 @@ export function FaceEnroll({ personId, householdId }: { personId: string; househ
 
   return (
     <div className="mt-2">
-      <label className="inline-block cursor-pointer rounded-lg border px-3 py-2 text-sm hover:bg-stone-100">
+      <label className="inline-block cursor-pointer rounded-lg border px-3 py-2 text-sm hover:bg-leaf">
         Add a face photo
         <input type="file" accept="image/*" onChange={onFile} className="sr-only" />
       </label>
-      {status && <p className="mt-1 text-sm text-stone-600" aria-live="polite">{status}</p>}
+      {status && <p className="mt-1 text-sm text-dim" aria-live="polite">{status}</p>}
     </div>
   );
 }

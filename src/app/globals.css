@@ -1,48 +1,82 @@
 @import "tailwindcss";
 
-/* Lavender light theme, after the reference design. Token names are the original ones
-   (garden, leaf, marigold) so every page re-themes from here. */
+/* The forest, everywhere: night sky, moon-cream ink, gold for anything you can press.
+   Token names are the original ones (garden, leaf, marigold) so every page re-themes from here;
+   the tablet keeps its own day and night below. */
 :root {
-  --paper: #f7f4ff;      /* lavender mist */
-  --ink: #2b2340;        /* deep plum ink, ~14:1 on paper */
-  --garden: #6a4fd6;     /* primary actions: violet */
-  --garden-deep: #4b33ad;
-  --marigold: #ffc56b;   /* reminders: warm, apart from the violet */
-  --leaf: #ece6ff;       /* quiet surfaces */
-  --surface: #ffffff;    /* cards and inputs */
-  --alarm: #b3261e;      /* help only */
-  --ring: rgb(106 79 214 / 0.14);
-  --stage: radial-gradient(ellipse 80% 70% at 50% 42%, #ffffff 0%, #f3eeff 52%, #e4dbff 100%);
+  --paper: #070B22;      /* the sky */
+  --ink: #F5F3EE;        /* moon-cream */
+  --dim: #AEB4C8;        /* quieter text */
+  --faint: #7D849C;      /* hints */
+  --garden: #FFCF7A;     /* primary actions: gold */
+  --garden-deep: #F2A93B;
+  --night: #251604;      /* text on gold */
+  --marigold: #FFCF7A;   /* reminders */
+  --mint: #A8F0C6;       /* Kodi's leaf */
+  --leaf: rgb(255 255 255 / 0.08);   /* quiet surfaces */
+  --panel: rgb(255 255 255 / 0.05);
+  --surface: rgb(11 18 48 / 0.86);   /* cards */
+  --line: rgb(255 255 255 / 0.13);
+  --alarm: #FF9A8F;      /* help only */
+  --ring: rgb(255 207 122 / 0.28);
+  --stage: radial-gradient(ellipse 90% 75% at 62% 70%, #13213F 0%, #0D1638 45%, #070B22 100%);
 }
 
-/* The tablet at night (7 pm to 6 am in her home): deep violet, Kodi glows. */
+/* The tablet by day (6 am to 7 pm in her home): dawn in the same forest. Cream paper, deep navy ink,
+   gold reminders; contrast stays high for low vision. */
+.tablet[data-theme="day"] {
+  --paper: #F7F3EA;
+  --ink: #16203B;
+  --dim: #4E5670;
+  --faint: #7A8198;
+  --garden: #1F3F63;
+  --garden-deep: #0F2A47;
+  --night: #F7F3EA;
+  --leaf: rgb(31 63 99 / 0.10);
+  --panel: rgb(31 63 99 / 0.06);
+  --surface: #ffffff;
+  --line: rgb(22 32 59 / 0.14);
+  --alarm: #B3261E;
+  --ring: rgb(31 63 99 / 0.16);
+  --stage: radial-gradient(ellipse 80% 70% at 50% 40%, #FFFDF8 0%, #F7F3EA 55%, #E9E2D2 100%);
+}
+
+/* The tablet at night (7 pm to 6 am): the forest after dark, Kodi glows. */
 .tablet[data-theme="night"] {
-  --paper: #120c26;
-  --ink: #f3efff;
-  --garden: #b9a6ee;
-  --garden-deep: #d7c9ff;
-  --leaf: rgb(185 166 238 / 0.14);
-  --surface: #1f1640;
-  --alarm: #ff8a80;
-  --ring: rgb(185 166 238 / 0.22);
-  --stage: radial-gradient(ellipse 90% 75% at 62% 70%, #3a237a 0%, #1a1036 45%, #08060f 100%);
+  --garden: #FFCF7A;
+  --garden-deep: #FFE1A8;
+  --leaf: rgb(255 207 122 / 0.14);
+  --surface: #0E1736;
+  --alarm: #FF9A8F;
+  --ring: rgb(255 207 122 / 0.22);
 }
 
 @theme inline {
   --color-paper: var(--paper);
   --color-ink: var(--ink);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
   --color-garden: var(--garden);
   --color-garden-deep: var(--garden-deep);
+  --color-night: var(--night);
   --color-marigold: var(--marigold);
+  --color-mint: var(--mint);
   --color-leaf: var(--leaf);
+  --color-panel: var(--panel);
   --color-surface: var(--surface);
+  --color-line: var(--line);
   --color-alarm: var(--alarm);
   --font-sans: var(--font-atkinson), var(--font-devanagari), system-ui, sans-serif;
   --font-display: var(--font-jakarta), var(--font-devanagari), system-ui, sans-serif;
 }
 
+@layer base {
+  /* a bare `border` takes the forest's hairline, not currentColor */
+  *, ::before, ::after { border-color: var(--line); }
+}
+
 body {
-  background: #fbfaff;
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
 }
@@ -261,4 +295,58 @@ body {
   .f-si-card { top: auto; bottom: 16px; transform: none; }
   .f-si-shade { background: linear-gradient(0deg, #070B22ee 0%, #070B2299 50%, transparent 75%); }
   .f-bubble { right: 8%; top: 12%; font-size: 22px; }
+}
+
+/* ---------- the app in the forest: family portal, invite, letter, setup (the same stage, standing still) ---------- */
+.f-app { color-scheme: dark; accent-color: var(--garden); }
+.f-app .f-woods svg { opacity: 1; }
+.f-app .f-moon { top: 13%; right: 4%; }  /* below the top bar, outside the page's columns */
+.f-nav { mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+.f-shell { position: relative; z-index: 3; min-height: 100dvh; display: flex; flex-direction: column; }
+.f-topbar { position: sticky; top: 0; z-index: 10; background: #070B22b3; backdrop-filter: blur(14px) saturate(140%); border-bottom: 1px solid var(--f-line); }
+.f-topbar-in { max-width: 1140px; margin: 0 auto; padding: 12px 24px 0; }
+.f-topbar-row { display: flex; align-items: center; gap: 18px; min-height: 36px; }
+.f-topbar .f-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; letter-spacing: -.02em; color: var(--f-ink); text-decoration: none; }
+.f-whose { color: var(--f-dim); font-size: 14px; margin-left: auto; text-align: right; }
+.f-whose b { color: var(--f-gold); font-weight: 500; }
+.f-nav { display: flex; gap: 4px; overflow-x: auto; margin: 0 -24px; padding: 8px 24px 10px; scrollbar-width: none; }
+.f-nav::-webkit-scrollbar { display: none; }
+.f-nav a { white-space: nowrap; padding: 7px 13px; border-radius: 999px; font-size: 14px; color: #DCDEEA; text-decoration: none; border: 1px solid transparent; }
+.f-nav a:hover { background: #ffffff10; }
+.f-nav a[aria-current="page"] { color: var(--f-gold); background: #FFCF7A14; border-color: #FFCF7A33; }
+.f-banner { background: #FFCF7A12; border-bottom: 1px solid #FFCF7A26; font-size: 14px; color: #EDE6D6; }
+.f-banner > div { max-width: 1140px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 8px 24px; }
+.f-banner button { border: 1px solid #FFCF7A55; border-radius: 999px; padding: 4px 12px; background: transparent; color: var(--f-gold); font: inherit; font-size: 13px; cursor: pointer; }
+.f-banner button:hover { background: #FFCF7A1a; }
+.f-page { width: 100%; max-width: 1140px; margin: 0 auto; padding: 36px 24px 96px; line-height: 1.55; }
+.f-h1 { font-weight: 500; font-size: clamp(28px, 3vw, 38px); line-height: 1.08; letter-spacing: -.035em; }
+.f-h2 { font-weight: 500; font-size: 21px; line-height: 1.2; letter-spacing: -.02em; }
+.f-h3 { font-weight: 500; font-size: 17px; line-height: 1.3; letter-spacing: -.01em; }
+.f-eyebrow { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--f-gold); }
+/* anything gold is something you can press */
+.f-app .bg-garden { background-image: linear-gradient(180deg, var(--garden), var(--garden-deep)); color: var(--night); font-weight: 500; }
+.f-app button.bg-garden, .f-app a.bg-garden { border-radius: 999px; box-shadow: 0 8px 28px -10px #F2A93B88, inset 0 1px 0 #ffffff88; }
+.f-app button.bg-garden:hover:not(:disabled), .f-app a.bg-garden:hover { filter: brightness(1.05); }
+.f-app input:not([type=checkbox]):not([type=radio]):not([type=file]), .f-app textarea, .f-app select { background: #ffffff0d; color: var(--ink); border-color: #ffffff2a; }
+.f-app input:focus, .f-app textarea:focus, .f-app select:focus { border-color: #FFCF7A99; background: #ffffff14; outline: none; }
+.f-app input[readonly] { color: var(--dim); }
+.f-app select option { background: #0D1638; color: var(--ink); }
+.f-app ::placeholder { color: var(--faint); }
+.f-app audio { width: 100%; border-radius: 999px; }
+.f-app .bg-surface { box-shadow: 0 24px 60px -40px #000; }
+.f-app .underline { text-decoration-color: #FFCF7A77; text-underline-offset: 3px; }
+.f-app hr { border-color: var(--line); }
+/* a single card on the stage: invite, letter, setup */
+.f-card-page { position: relative; z-index: 3; width: min(560px, calc(100% - 32px)); margin: clamp(40px, 12vh, 120px) auto 80px; padding: 36px clamp(22px, 4vw, 40px); border-radius: 28px; line-height: 1.55; }
+.f-card-page.wide { width: min(680px, calc(100% - 32px)); }
+.f-card-page .f-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; letter-spacing: -.02em; color: var(--f-ink); text-decoration: none; }
+.f-card-page h1 { margin: 22px 0 0; font-weight: 500; font-size: clamp(28px, 3.2vw, 36px); line-height: 1.08; letter-spacing: -.035em; }
+.f-card-page .f-sub { margin: 12px 0 0; color: var(--f-dim); font-size: 15.5px; }
+.f-letter-quote { margin: 26px 0 0; padding-left: 18px; border-left: 2px solid var(--f-gold); font-size: clamp(19px, 2vw, 23px); line-height: 1.5; color: #EDE6D6; }
+@media (max-width: 640px) {
+  .f-topbar-row { flex-wrap: wrap; gap: 8px 14px; }
+  .f-whose { margin-left: 0; text-align: left; width: 100%; font-size: 13px; }
+  .f-page { padding: 24px 16px 80px; }
+  .f-topbar-in, .f-banner > div { padding-left: 16px; padding-right: 16px; }
+  .f-nav { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
 }

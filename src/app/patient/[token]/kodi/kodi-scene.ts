@@ -314,7 +314,7 @@ export class KodiScene {
     this.points.rotation.x = still ? 0 : 0.05 * Math.sin(t * 0.27) - 0.1 * U.uLookY.value;
 
     const hm = this.halo.material as THREE.SpriteMaterial;
-    hm.color.set('#d9f2e1').lerp(new THREE.Color('#7b5cff'), this.night).lerp(new THREE.Color('#ffc2d9'), this.emo.love * 0.5);
+    hm.color.set('#d9f2e1').lerp(new THREE.Color('#9DB4FF'), this.night).lerp(new THREE.Color('#ffc2d9'), this.emo.love * 0.5);
     hm.blending = this.night > 0.5 ? THREE.AdditiveBlending : THREE.NormalBlending;
     hm.opacity = (0.55 - 0.2 * this.night) * (1 + 0.35 * U.uHear.value + 0.5 * this.talk + 0.3 * this.emo.happy) * Math.min(1, U.uForm.value * 1.5) * U.uDim.value;
     const hs = 4.6 * (1 + 0.02 * Math.sin(t * 1.55) + 0.06 * U.uHear.value + 0.04 * this.talk);

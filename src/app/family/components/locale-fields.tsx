@@ -28,7 +28,7 @@ export function LocaleFields({ language, timezone, locked = false }: { language?
       </label>
       <label className="block">Time zone
         <input name="timezone" value={tz} onChange={(e) => setTz(e.target.value)} disabled={locked} className={field} />
-        <span className="mt-1 block text-sm text-stone-500">Where they live, e.g. Asia/Kolkata, Europe/London, America/New_York.</span>
+        <span className="mt-1 block text-sm text-dim">Where they live, e.g. Asia/Kolkata, Europe/London, America/New_York.</span>
       </label>
     </>
   );

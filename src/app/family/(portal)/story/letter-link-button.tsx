@@ -10,7 +10,7 @@ export function LetterLinkButton({ memoryId }: { memoryId: string }) {
     const l = await newLetterLink(memoryId);
     setLink(l ?? 'no');
   }
-  if (link === 'no') return <span className="text-xs text-stone-500">Can&apos;t make a link for this one.</span>;
+  if (link === 'no') return <span className="text-xs text-dim">Can&apos;t make a link for this one.</span>;
   if (link && link !== 'busy') return <code className="break-all text-xs">{link}</code>;
   return <button onClick={make} disabled={link === 'busy'} className="text-garden underline disabled:opacity-60">{link === 'busy' ? '…' : 'Make a link to send'}</button>;
 }

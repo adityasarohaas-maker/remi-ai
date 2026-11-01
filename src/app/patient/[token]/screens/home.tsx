@@ -35,7 +35,7 @@ const ICONS = {
 function ActionCard({ onClick, label, glyph }: { onClick: () => void; label: string; glyph: ReactNode }) {
   return (
     <button onClick={onClick}
-      className="group flex min-h-16 flex-col items-center justify-center gap-1 rounded-3xl bg-surface/70 p-2 text-center shadow-[0_0_0_1px_var(--ring),0_18px_40px_-28px_rgb(60_30_140/0.55)] backdrop-blur-md hover:bg-surface sm:flex-row sm:justify-start sm:gap-4 sm:p-4 sm:text-left">
+      className="group flex min-h-16 flex-col items-center justify-center gap-1 rounded-3xl bg-surface/70 p-2 text-center shadow-[0_0_0_1px_var(--ring),0_18px_40px_-28px_rgb(5_10_30/0.55)] backdrop-blur-md hover:bg-surface sm:flex-row sm:justify-start sm:gap-4 sm:p-4 sm:text-left">
       <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-garden text-paper sm:size-12">{glyph}</span>
       <span className="font-display text-base font-semibold leading-tight sm:flex-1 sm:text-2xl">{label}</span>
       <span aria-hidden className="hidden size-10 shrink-0 place-items-center rounded-full bg-leaf text-xl text-garden-deep group-hover:translate-x-0.5 rtl:-scale-x-100 sm:grid">→</span>

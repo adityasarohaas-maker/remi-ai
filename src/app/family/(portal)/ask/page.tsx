@@ -11,8 +11,8 @@ export default async function AskPage() {
   const suggestions = (titles ?? []).map((t) => `What did ${name} say about ${String(t.title).toLowerCase()}?`);
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold">Ask about {name}</h1>
-      <p className="mt-1 text-stone-600">
+      <h1 className="f-h1">Ask about {name}</h1>
+      <p className="mt-1 text-dim">
         Ask anything. Remi answers only from what {name} herself told it, in her own words, and plays the clip.
         {h?.status === 'passed' ? ' Nothing is invented; some things she simply never told Remi.' : ''}
       </p>

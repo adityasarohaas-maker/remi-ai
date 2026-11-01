@@ -24,10 +24,10 @@ export function InviteForm({ mayInviteAdmin }: { mayInviteAdmin: boolean }) {
         <option value="family">Family</option>
         {mayInviteAdmin && <option value="admin">Admin</option>}
       </select>
-      <button disabled={busy} className="rounded-lg bg-garden px-4 py-2 text-white disabled:opacity-60">{busy ? 'Inviting…' : 'Invite'}</button>
-      {result?.error && <p role="alert" className="text-red-700 sm:col-span-4">{result.error}</p>}
+      <button disabled={busy} className="rounded-lg bg-garden px-4 py-2 text-night disabled:opacity-60">{busy ? 'Inviting…' : 'Invite'}</button>
+      {result?.error && <p role="alert" className="text-alarm sm:col-span-4">{result.error}</p>}
       {result?.link && (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm sm:col-span-4">
+        <p className="rounded-lg bg-garden/10 p-3 text-sm sm:col-span-4">
           Invite link (copy and send it if the email doesn&apos;t arrive): <code className="break-all">{result.link}</code>
         </p>
       )}

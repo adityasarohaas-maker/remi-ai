@@ -56,12 +56,12 @@ export function ExportButton({ name }: { name: string }) {
 
   return (
     <div>
-      <button onClick={run} disabled={state === 'working'} className="rounded-lg bg-garden px-5 py-3 text-white disabled:opacity-60">
+      <button onClick={run} disabled={state === 'working'} className="rounded-lg bg-garden px-5 py-3 text-night disabled:opacity-60">
         {state === 'working' ? 'Preparing…' : 'Download everything'}
       </button>
-      {state === 'working' && <p className="mt-2 text-sm text-stone-600">{progress} This can take a few minutes for a big archive.</p>}
-      {state === 'done' && <p className="mt-2 text-sm text-stone-600">Saved. Keep it somewhere safe.</p>}
-      {state === 'error' && <p role="alert" className="mt-2 text-sm text-red-700">Something went wrong. Try again in a moment.</p>}
+      {state === 'working' && <p className="mt-2 text-sm text-dim">{progress} This can take a few minutes for a big archive.</p>}
+      {state === 'done' && <p className="mt-2 text-sm text-dim">Saved. Keep it somewhere safe.</p>}
+      {state === 'error' && <p role="alert" className="mt-2 text-sm text-alarm">Something went wrong. Try again in a moment.</p>}
     </div>
   );
 }

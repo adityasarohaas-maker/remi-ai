@@ -38,19 +38,19 @@ export default async function StoryPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">{name}&apos;s story</h1>
-      <p className="mt-1 text-stone-600">What she has told Remi, in her own words. Mark anything that doesn&apos;t sound right as unsure.</p>
+      <h1 className="f-h1">{name}&apos;s story</h1>
+      <p className="mt-1 text-dim">What she has told Remi, in her own words. Mark anything that doesn&apos;t sound right as unsure.</p>
       {sealedTotal > 0 && (
-        <p className="mt-4 rounded-xl border border-dashed bg-white p-4 text-sm text-stone-600">
+        <p className="mt-4 rounded-xl border border-dashed bg-surface p-4 text-sm text-dim">
           {sealedTotal} {sealedTotal === 1 ? 'memory is' : 'memories are'} sealed: {sealedList.map((s) => `${s.n} ${SEALED_LABEL[s.visibility] ?? s.visibility}`).join(', ')}.
         </p>
       )}
-      {chapters.length === 0 && <p className="mt-8 text-stone-600">Nothing kept yet. Stories appear here after she talks with Remi.</p>}
+      {chapters.length === 0 && <p className="mt-8 text-dim">Nothing kept yet. Stories appear here after she talks with Remi.</p>}
       <ComingLater sealed={sealedItems} events={(events ?? []) as { id: string; name: string; happened_on: string | null }[]} names={names} admin={canAdmin(role)} name={name} />
       {chapters.map((c) => (
         <section key={c.stage} className="mt-10">
-          <h2 className="text-xl font-semibold">{c.title}</h2>
-          {c.stage === 'wishes' && <p className="mt-1 text-sm text-stone-600">These are {name}&apos;s wishes in her own words. They are not a legal will.</p>}
+          <h2 className="f-h2">{c.title}</h2>
+          {c.stage === 'wishes' && <p className="mt-1 text-sm text-dim">These are {name}&apos;s wishes in her own words. They are not a legal will.</p>}
           <div className="mt-4 space-y-4">
             {c.memories.map((m) => <MemoryCard key={m.id} m={m} name={name} />)}
           </div>

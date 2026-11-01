@@ -10,7 +10,12 @@ describe('forest cloud', () => {
   it('keeps the sky above Kodi clear of trees', () => {
     for (let i = 0; i < forest.i; i++) if (forest.part[i] === PART.TREE) { const x = forest.pos[i * 3], y = forest.pos[i * 3 + 1]; if (Math.abs(x) < 3.0 && y > GROUND + 1.5) throw new Error(`tree at ${x},${y}`); }
   });
-  it('grows everything from the ground up', () => { for (let i = 0; i < forest.i; i++) expect(forest.pos[i * 3 + 1]).toBeGreaterThanOrEqual(GROUND - 0.05); });
+  it('grows everything from the ground up', () => {
+    // one assertion over the whole cloud: an expect() per point is a quarter of a million calls and times out on a busy machine
+    let below = 0;
+    for (let i = 0; i < forest.i; i++) if (forest.pos[i * 3 + 1] < GROUND - 0.05) below++;
+    expect(below).toBe(0);
+  });
   it('seeds falling leaves from the crowns', () => { expect(crowns.length).toBeGreaterThan(10); });
   it('fits the low budget', () => { expect(buildForestCloud(TIER_BUDGET.low, mulberry32(1)).forest.i).toBeLessThan(80000); });
   it('makes the creatures', () => {

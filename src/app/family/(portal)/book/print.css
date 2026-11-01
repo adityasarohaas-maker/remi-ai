@@ -1,9 +1,12 @@
 /* The memory book, A5, printed from the browser ("Save as PDF"). */
 @page { size: A5; margin: 16mm 14mm; }
 @media print {
-  header, nav, .no-print { display: none !important; }
+  header, nav, .no-print, .f-stage, .f-banner { display: none !important; }
   main { max-width: none !important; padding: 0 !important; }
-  body { background: white !important; }
+  /* paper is paper: the forest stays on the screen */
+  body, .forest, .f-shell { background: white !important; color: #16203B !important; }
+  .book { --dim: #4E5670; --faint: #7A8198; --line: #d7d3c8; --garden: #8a5a10; }
+  .book .text-dim { color: #4E5670 !important; }
   .book { font-size: 11pt; }
   .book-cover { page-break-after: always; display: flex; flex-direction: column; justify-content: center; min-height: 80vh; text-align: center; }
   .book-chapter { page-break-before: always; }

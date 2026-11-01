@@ -12,9 +12,9 @@ export default async function TalkWithPage() {
   const allowed = h?.status === 'passed' && !!c?.allow_persona;
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold">Talk with {name} <span className="ml-2 align-middle rounded-full border border-stone-400 px-2 py-0.5 text-xs uppercase tracking-wide text-stone-500">AI</span></h1>
+      <h1 className="f-h1">Talk with {name} <span className="ml-2 align-middle rounded-full border border-line px-2 py-0.5 text-xs uppercase tracking-wide text-dim">AI</span></h1>
       {!allowed ? (
-        <p className="mt-3 text-stone-600">
+        <p className="mt-3 text-dim">
           {h?.status !== 'passed'
             ? `This becomes available after ${name} has passed, if she allowed it.`
             : `${name} did not allow this, or the family hasn't turned it on.`} See <Link href="/family/consent" className="underline">her say</Link>.

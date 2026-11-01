@@ -27,10 +27,10 @@ export function WriteNoteButton({ hasNote }: { hasNote: boolean }) {
 
   return (
     <div className="mt-3">
-      <button onClick={write} disabled={busy} className="rounded-lg bg-garden px-4 py-2 text-white disabled:opacity-60">
+      <button onClick={write} disabled={busy} className="rounded-lg bg-garden px-4 py-2 text-night disabled:opacity-60">
         {busy ? 'Writing… (about 20 seconds)' : hasNote ? "Rewrite today's note" : "Write today's note"}
       </button>
-      {error && <p role="alert" className="mt-2 text-red-700">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-alarm">{error}</p>}
     </div>
   );
 }

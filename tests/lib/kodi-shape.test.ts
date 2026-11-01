@@ -22,12 +22,14 @@ describe('buildKodi', () => {
   });
 
   it('keeps Kodi inside its frame and colours in range', () => {
+    // one assertion over the whole cloud: three expect() calls per point time out on a busy machine
+    let outside = 0;
     for (let i = 0; i < k.group.length; i++) {
       if (k.group[i] === KODI_GROUP.AURA || k.group[i] === KODI_GROUP.HEART) continue;
-      expect(Math.abs(k.position[i * 3])).toBeLessThan(1.4);
-      expect(k.position[i * 3 + 1]).toBeGreaterThan(-1.8);
-      expect(k.position[i * 3 + 1]).toBeLessThan(2.05);
+      const x = Math.abs(k.position[i * 3]), y = k.position[i * 3 + 1];
+      if (x >= 1.4 || y <= -1.8 || y >= 2.05) outside++;
     }
+    expect(outside).toBe(0);
     expect(Math.max(...k.colorDay)).toBeLessThanOrEqual(1);
     expect(Math.min(...k.colorNight)).toBeGreaterThanOrEqual(0);
   });

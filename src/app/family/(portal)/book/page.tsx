@@ -29,7 +29,7 @@ export default async function BookPage() {
 
   return (
     <div className="book">
-      <div className="no-print mb-6 flex flex-wrap items-center gap-4 rounded-xl border bg-white p-4 text-sm">
+      <div className="no-print mb-6 flex flex-wrap items-center gap-4 rounded-xl border bg-surface p-4 text-sm">
         <span>Only what the whole family may read goes in: {chapters.reduce((n, c) => n + c.memories.length, 0)} memories. Each code opens the recording.</span>
         <PrintButton />
       </div>
@@ -38,33 +38,33 @@ export default async function BookPage() {
           // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived URL
           <img src={cover} alt="" className="mx-auto mb-6 max-h-64 rounded-xl object-cover" />
         )}
-        <p className="text-sm uppercase tracking-widest text-stone-500">In her own words</p>
+        <p className="text-sm uppercase tracking-widest text-dim">In her own words</p>
         <h1 className="mt-2 text-4xl font-semibold">{h?.patient_name ?? name}</h1>
-        {span && <p className="mt-2 text-stone-600">{span}</p>}
-        <p className="mt-10 text-sm text-stone-500">Kept by Remi, from what {name} told it.</p>
+        {span && <p className="mt-2 text-dim">{span}</p>}
+        <p className="mt-10 text-sm text-dim">Kept by Remi, from what {name} told it.</p>
       </section>
       {chapters.map((c) => (
         <section key={c.stage} className="book-chapter mt-10">
-          <h2 className="text-2xl font-semibold">{c.title}</h2>
-          {c.stage === 'wishes' && <p className="mt-1 text-sm text-stone-600">{name}&apos;s wishes, in her own words. Not a legal will.</p>}
+          <h2 className="f-h1">{c.title}</h2>
+          {c.stage === 'wishes' && <p className="mt-1 text-sm text-dim">{name}&apos;s wishes, in her own words. Not a legal will.</p>}
           <div className="mt-6">
             {c.memories.map((m) => (
               <article key={m.id} className="book-memory">
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-lg font-semibold">{m.title}{m.yearFrom ? <span className="ml-2 text-sm font-normal text-stone-500">{m.yearFrom}</span> : null}</h3>
+                  <h3 className="f-h3">{m.title}{m.yearFrom ? <span className="ml-2 text-sm font-normal text-dim">{m.yearFrom}</span> : null}</h3>
                   {qr.get(m.id) && (
                     // eslint-disable-next-line @next/next/no-img-element -- a generated data URL
                     <img src={qr.get(m.id)} alt="Scan to hear her tell it" width={64} height={64} className="shrink-0" />
                   )}
                 </div>
-                <blockquote className="book-quote mt-2 border-l-2 border-stone-300 pl-4">“{m.quote}”</blockquote>
-                {m.translation && <p className="mt-1 text-sm text-stone-600">{m.translation}</p>}
+                <blockquote className="book-quote mt-2 border-l-2 border-line pl-4">“{m.quote}”</blockquote>
+                {m.translation && <p className="mt-1 text-sm text-dim">{m.translation}</p>}
               </article>
             ))}
           </div>
         </section>
       ))}
-      {!chapters.length && <p className="text-stone-600">Nothing to print yet.</p>}
+      {!chapters.length && <p className="text-dim">Nothing to print yet.</p>}
     </div>
   );
 }

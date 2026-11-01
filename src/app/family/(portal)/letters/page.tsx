@@ -14,11 +14,11 @@ export default async function LettersPage() {
   const letters = ((rows ?? []) as MemoryDbRow[]).map(memoryFromRow);
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Letters from {name}</h1>
-      <p className="mt-1 text-stone-600">What she sealed and has now opened, and what she left for particular people. Only what you may see is shown here.</p>
+      <h1 className="f-h1">Letters from {name}</h1>
+      <p className="mt-1 text-dim">What she sealed and has now opened, and what she left for particular people. Only what you may see is shown here.</p>
       <div className="mt-6 space-y-4">
         {letters.map((m) => <MemoryCard key={m.id} m={m} name={name} />)}
-        {!letters.length && <p className="text-stone-600">Nothing has opened for you yet. Sealed items and the days they wait for are listed under Story.</p>}
+        {!letters.length && <p className="text-dim">Nothing has opened for you yet. Sealed items and the days they wait for are listed under Story.</p>}
       </div>
     </div>
   );

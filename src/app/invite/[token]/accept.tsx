@@ -30,10 +30,10 @@ export function AcceptInvite({ token, email }: { token: string; email: string })
 
   return (
     <form onSubmit={submit} className="mt-8 space-y-4">
-      <input type="email" value={email} readOnly className="w-full rounded-lg border bg-stone-50 px-4 py-3 text-stone-600" />
+      <input type="email" value={email} readOnly className="w-full rounded-lg border bg-panel px-4 py-3 text-dim" />
       <input name="password" type="password" required minLength={8} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} placeholder="Password (8+ characters)" className="w-full rounded-lg border px-4 py-3" />
-      {error && <p role="alert" className="text-red-700">{error}</p>}
-      <button disabled={busy} className="w-full rounded-lg bg-garden px-4 py-3 text-white disabled:opacity-60">
+      {error && <p role="alert" className="text-alarm">{error}</p>}
+      <button disabled={busy} className="w-full rounded-lg bg-garden px-4 py-3 text-night disabled:opacity-60">
         {busy ? 'Please wait…' : mode === 'in' ? 'Sign in and join' : 'Create account and join'}
       </button>
       <button type="button" onClick={() => setMode(mode === 'in' ? 'up' : 'in')} className="text-garden underline">

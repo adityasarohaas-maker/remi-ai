@@ -28,18 +28,18 @@ export default async function RememberPage() {
   ];
   return (
     <div>
-      <p className="text-sm uppercase tracking-wide text-stone-500">In memory of</p>
-      <h1 className="mt-1 text-3xl font-semibold">{h.patient_name}</h1>
-      {h.passed_on && <p className="text-stone-600">{h.passed_on}</p>}
+      <p className="f-eyebrow">In memory of</p>
+      <h1 className="mt-1 f-h1">{h.patient_name}</h1>
+      {h.passed_on && <p className="text-dim">{h.passed_on}</p>}
       {today && (
         <section className="mt-8">
-          <h2 className="text-xl font-semibold">A story for today</h2>
+          <h2 className="f-h2">A story for today</h2>
           <div className="mt-3"><MemoryCard m={today} name={name} /></div>
         </section>
       )}
       <ul className="mt-10 grid gap-4 sm:grid-cols-2">
         {ways.map(([href, title, blurb]) => (
-          <li key={href}><Link href={href} className="block rounded-xl border bg-white p-5 hover:bg-stone-50"><span className="text-lg font-semibold">{title}</span><span className="mt-1 block text-sm text-stone-600">{blurb}</span></Link></li>
+          <li key={href}><Link href={href} className="block rounded-xl border bg-surface p-5 hover:bg-leaf"><span className="f-h3">{title}</span><span className="mt-1 block text-sm text-dim">{blurb}</span></Link></li>
         ))}
       </ul>
     </div>

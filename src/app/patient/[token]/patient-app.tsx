@@ -133,9 +133,9 @@ export function PatientApp({ token, preferredName, language: homeLanguage, peopl
         </div>
       )}
       {!passed && due && (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-4 bg-marigold px-6 py-5 text-2xl text-[#2b2340] sm:px-10 sm:text-3xl">
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-4 bg-marigold px-6 py-5 text-2xl text-[#251604] sm:px-10 sm:text-3xl">
           <span className="max-w-3xl">{due.spokenMessage ?? due.label}</span>
-          <button onClick={() => tapDone(due.id)} className="min-h-16 rounded-2xl bg-[#2b2340] px-8 font-display font-bold text-white">{t.done}</button>
+          <button onClick={() => tapDone(due.id)} className="min-h-16 rounded-2xl bg-[#16203B] px-8 font-display font-bold text-[#F5F3EE]">{t.done}</button>
         </div>
       )}
       {remi.active && screen !== 'home' && <RemiStatusLine status={remi.status} language={language} className="px-6 pt-5 sm:px-12" />}
