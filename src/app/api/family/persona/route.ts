@@ -1,7 +1,7 @@
 import { supabaseServer } from '@/lib/supabase/server';
 import { supabaseDeps } from '@/lib/deps';
 import { chatStream, MODELS, type ChatMessage } from '@/lib/claude';
-import { cloudVoiceConfigured, synthesize, VOICE_PER_MIN } from '@/lib/azure-tts';
+import { cloudVoiceConfigured, synthesize, voiceAllowed } from '@/lib/azure-tts';
 import { createSpokenReply } from '@/core/stream-speech';
 import { buildPersonaPrompt, pickPersonaMemories, type PersonaMemory } from '@/core/persona-prompt';
 import { voiceLocale } from '@/core/voices';
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
   const voiced = cloudVoiceConfigured();
   const synth = async (s: string) => {
-    if (!(await deps.takeRateToken(householdId, 'voice', VOICE_PER_MIN, 60))) return null;
+    if (!(await voiceAllowed(deps.takeRateToken, householdId))) return null;
     return synthesize(s, voiceLocale(s, h.language as string));
   };
   const encoder = new TextEncoder();

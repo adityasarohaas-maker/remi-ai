@@ -1,4 +1,4 @@
-import { requireDevice } from '@/lib/household';
+import { requireLivingDevice } from '@/lib/household';
 import { supabaseDeps } from '@/lib/deps';
 import { extractNewMemories } from '@/lib/memories';
 
@@ -6,7 +6,7 @@ export const maxDuration = 120;
 
 /** The tablet has been quiet for a while after a talk: keep what she told Remi. */
 export async function POST(req: Request) {
-  const householdId = await requireDevice(req);
+  const householdId = await requireLivingDevice(req);
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
   if (!(await supabaseDeps().takeRateToken(householdId, 'conversation-end', 1, 120))) {
     return Response.json({ created: 0, skipped: 'recent' });

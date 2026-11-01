@@ -11,7 +11,7 @@ export default async function ConsentPage() {
   ]);
   const name = h?.preferred_name ?? '';
   const admin = canAdmin(role);
-  const clip = c?.recording_id ? await signedRecordingUrl(c.recording_id as string) : null;
+  const clip = c?.recording_id ? await signedRecordingUrl(c.recording_id as string, householdId) : null;
   const dis = admin ? {} : { disabled: true };
 
   return (

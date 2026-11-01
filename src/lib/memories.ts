@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { chatJson, MODELS } from '@/lib/claude';
 import { sendEmail, escapeHtml } from '@/lib/email';
 import { buildExtractionPrompt, draftToRow, sealedTurnIndexes, ExtractionSchema, type Turn } from '@/core/extract';
-import type { CareType } from '@/core/types';
+import type { CareType, Visibility } from '@/core/types';
 
 const MIN_TURNS = 2;
 const MAX_TURNS = 80;
@@ -58,8 +58,10 @@ export async function extractNewMemories(householdId: string): Promise<{ created
 
   let created = 0;
   const answered: { questionId: string; memoryId: string }[] = [];
+  const landed: { turnIndexes: number[]; visibility: Visibility }[] = [];
   for (const draft of out.memories) {
     const { new_event_name, ...row } = draftToRow(draft, ctx);
+    landed.push({ turnIndexes: draft.turnIndexes, visibility: row.visibility });
     if (new_event_name) {
       const { data: ev } = await db.from('life_events').insert({ household_id: householdId, name: new_event_name }).select('id').single();
       row.open_event_id = ev?.id ?? null;
@@ -85,11 +87,11 @@ export async function extractNewMemories(householdId: string): Promise<{ created
 
   // what she kept for someone in particular, or for Remi alone, must not stay readable as a transcript
   const eventIds = ((events ?? []) as ConversationEvent[]).filter((e) => typeof e.payload.text === 'string' && typeof e.payload.reply === 'string' && !e.payload.fallback).map((e) => e.id);
-  for (const i of sealedTurnIndexes(out.memories)) {
+  for (const i of sealedTurnIndexes(landed, eventIds.length)) {
     const eid = eventIds[i];
     const ev = ((events ?? []) as ConversationEvent[]).find((e) => e.id === eid);
     if (!ev) continue;
-    await db.from('events').update({ payload: { ...ev.payload, text: '[kept privately by Remi]', reply: '[kept privately by Remi]', sealed: true } }).eq('id', eid);
+    await db.from('events').update({ payload: { ...ev.payload, text: '[kept privately by Remi]', reply: '[kept privately by Remi]', recordingId: null, personName: null, sealed: true } }).eq('id', eid);
   }
 
   await db.from('households').update({ extracted_through: through }).eq('id', householdId);

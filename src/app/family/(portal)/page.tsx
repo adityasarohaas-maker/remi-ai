@@ -6,6 +6,8 @@ import { WriteNoteButton } from './write-note';
 import { memoryFromRow, MEMORY_COLUMNS, type MemoryDbRow } from '@/core/memory-row';
 import { MemoryCard } from './story/memory-card';
 import { CARE_LABEL, type CareKind } from '@/core/care-signals';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { showableTurns, type TranscriptEvent } from '@/core/transcript';
 
 const REASON: Record<string, string> = {
   safety: 'Safety words heard',
@@ -22,7 +24,7 @@ type Convo = { text: string; reply: string; mood?: string; sensitiveTopic?: stri
 
 export default async function FamilyHome() {
   const { sb, householdId } = await requireFamily();
-  const { data: h } = await sb.from('households').select('preferred_name, timezone').eq('id', householdId).single();
+  const { data: h } = await sb.from('households').select('preferred_name, timezone, extracted_through').eq('id', householdId).single();
   const tz = safeTimeZone(h?.timezone);
   const now = new Date();
   const today = localParts(now, tz).day;
@@ -31,11 +33,14 @@ export default async function FamilyHome() {
   const [{ data: alerts }, { data: digest }, { data: talk }, { data: fresh }, { data: signals }] = await Promise.all([
     sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'alert').order('created_at', { ascending: false }).limit(10),
     sb.from('digests').select('summary, created_at').eq('household_id', householdId).eq('day', today).maybeSingle(),
-    sb.from('events').select('payload, created_at').eq('household_id', householdId).eq('type', 'conversation').order('created_at', { ascending: false }).limit(10),
+    // members can't read transcripts directly; the server hands over only what she hasn't kept back
+    supabaseAdmin().from('events').select('id, payload, created_at').eq('household_id', householdId).eq('type', 'conversation')
+      .lte('id', (h?.extracted_through as number | undefined) ?? 0).order('id', { ascending: false }).limit(30),
     sb.from('memories').select(MEMORY_COLUMNS).eq('household_id', householdId).gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(3),
     sb.from('care_signals').select('kind, detail, created_at').eq('household_id', householdId).gte('created_at', dayStart).order('created_at', { ascending: false }).limit(10),
   ]);
   const newStories = ((fresh ?? []) as MemoryDbRow[]).map(memoryFromRow);
+  const turns = showableTurns((talk ?? []) as TranscriptEvent[], (h?.extracted_through as number | undefined) ?? 0).slice(0, 10);
   const when = (iso: string) => {
     const p = localParts(new Date(iso), tz);
     return p.day === today ? p.prettyTime : `${p.prettyTime}, ${p.prettyDate}`;
@@ -68,7 +73,7 @@ export default async function FamilyHome() {
 
         <h2 className="mt-10 f-h2">What {name} talked about</h2>
         <ul className="mt-3 space-y-3">
-          {(talk ?? []).map((e, i) => {
+          {turns.map((e, i) => {
             const c = e.payload as Convo;
             return (
               <li key={i} className="rounded-xl border bg-surface p-4">
@@ -82,7 +87,7 @@ export default async function FamilyHome() {
               </li>
             );
           })}
-          {!talk?.length && <li className="text-dim">Nothing yet. Conversations on the tablet appear here.</li>}
+          {!turns.length && <li className="text-dim">Nothing yet. Conversations appear here once Remi has gone through them overnight, leaving out anything {name} asked to keep.</li>}
         </ul>
       </section>
 

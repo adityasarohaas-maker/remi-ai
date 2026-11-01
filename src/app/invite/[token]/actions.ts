@@ -24,9 +24,16 @@ export async function acceptInvite(token: string): Promise<{ ok: true } | { erro
   const { data: inv } = await db.from('invites').select('id, household_id, email, display_name, role, expires_at, accepted_at')
     .eq('token_hash', hashDeviceToken(token)).maybeSingle();
   if (!inv || inv.accepted_at || new Date(inv.expires_at) < new Date()) return { error: 'This invite is no longer valid.' };
+  // the link is for the person it was sent to, not whoever holds it
+  if ((user.email ?? '').toLowerCase() !== String(inv.email).toLowerCase()) return { error: `This invite is for ${inv.email}. Sign in with that address.` };
   const { data: existing } = await db.from('household_members').select('household_id').eq('user_id', user.id).maybeSingle();
   if (existing && existing.household_id !== inv.household_id) return { error: 'This account already belongs to another family.' };
-  const { error } = await db.from('household_members').upsert({
+  // already in this family: an invite never changes someone's role, or a stray link could demote the owner
+  if (existing) {
+    await db.from('invites').update({ accepted_at: new Date().toISOString() }).eq('id', inv.id);
+    return { ok: true };
+  }
+  const { error } = await db.from('household_members').insert({
     household_id: inv.household_id, user_id: user.id, role: inv.role, display_name: inv.display_name, email: user.email ?? inv.email,
   });
   if (error) return { error: error.message };

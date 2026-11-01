@@ -1,7 +1,7 @@
 import { requireDevice } from '@/lib/household';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { supabaseDeps } from '@/lib/deps';
-import { cloudVoiceConfigured, synthesize, VOICE_PER_MIN } from '@/lib/azure-tts';
+import { cloudVoiceConfigured, synthesize, voiceAllowed } from '@/lib/azure-tts';
 import { isSupportedLanguage, voiceLocale } from '@/core/voices';
 
 const MAX_CHARS = 400;      // one sentence or two; Remi speaks a reply a sentence at a time
@@ -20,12 +20,9 @@ export async function POST(req: Request) {
     ? body.language
     : (await supabaseAdmin().from('households').select('language').eq('id', householdId).single()).data?.language ?? 'en-US';
   const locale = voiceLocale(text, household);
-  // Remi is mid-sentence while this runs: check the limit and make the audio at the same time.
-  const audio = synthesize(text, locale);
-  audio.catch(() => {}); // handled below; never an unhandled rejection when the limit says no
-  if (!(await supabaseDeps().takeRateToken(householdId, 'voice', VOICE_PER_MIN, 60))) return new Response(null, { status: 429 });
+  if (!(await voiceAllowed(supabaseDeps().takeRateToken, householdId))) return new Response(null, { status: 429 });
   try {
-    return new Response(await audio, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store' } });
+    return new Response(await synthesize(text, locale), { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store' } });
   } catch (e) {
     console.error('voice failed', e);
     return new Response(null, { status: 502 }); // the tablet falls back to its own voice

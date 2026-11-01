@@ -48,7 +48,7 @@ npm run demo:clips           # voice for the demo memories (or drop your own in 
 npm run seed:demo            # the demo family
 ```
 
-Migrations live in `supabase/migrations/`; `supabase/tests/0005_visibility.sql` proves the visibility rules as two family members would see them.
+Migrations live in `supabase/migrations/`; apply `0006_security.sql` straight after `0005_legacy.sql`. `supabase/tests/0006_security.sql` tries each known attack as a signed-in user and rolls back; `supabase/tests/0005_visibility.sql` proves the visibility rules as two family members would see them.
 
 ## Known gaps
 

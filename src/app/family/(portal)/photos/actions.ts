@@ -1,13 +1,13 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'node:crypto';
-import { requireFamily } from '@/lib/household';
+import { requireWriter, requireAdminWriter } from '@/lib/household';
 import { field } from '@/lib/form';
 
 const PHOTO_MAX_BYTES = 8_000_000;
 
 export async function addPhoto(form: FormData): Promise<void> {
-  const { sb, householdId, user } = await requireFamily();
+  const { sb, householdId, user } = await requireWriter();
   const file = form.get('photo');
   if (!(file instanceof File) || !file.size || !file.type.startsWith('image/') || file.size > PHOTO_MAX_BYTES) return;
   const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
@@ -24,11 +24,12 @@ export async function addPhoto(form: FormData): Promise<void> {
 }
 
 export async function deletePhoto(form: FormData) {
-  const { sb, householdId } = await requireFamily();
+  const { sb, householdId } = await requireAdminWriter();
   const id = field(form, 'id', 64);
   const { data } = await sb.from('photos').select('storage_path').eq('id', id).eq('household_id', householdId).maybeSingle();
   if (!data) return;
-  await sb.from('photos').delete().eq('id', id); // RLS: admins only
+  const { error } = await sb.from('photos').delete().eq('id', id); // the file goes only after the row did
+  if (error) throw new Error(error.message);
   await sb.storage.from('family-media').remove([data.storage_path as string]);
   revalidatePath('/family/photos');
 }

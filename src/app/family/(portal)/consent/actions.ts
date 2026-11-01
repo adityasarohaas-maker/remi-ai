@@ -1,10 +1,10 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { requireAdmin } from '@/lib/household';
+import { requireAdminWriter } from '@/lib/household';
 import { field } from '@/lib/form';
 
 export async function saveConsent(form: FormData) {
-  const { sb, householdId, displayName, user } = await requireAdmin();
+  const { sb, householdId, displayName, user } = await requireAdminWriter();
   const decidedBy = field(form, 'decided_by', 10) === 'person' ? 'person' : 'family';
   const { data: h } = await sb.from('households').select('preferred_name').eq('id', householdId).single();
   const { error } = await sb.from('consents').upsert({

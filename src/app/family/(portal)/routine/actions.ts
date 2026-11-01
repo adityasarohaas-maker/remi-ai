@@ -1,12 +1,12 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { requireFamily } from '@/lib/household';
+import { requireWriter } from '@/lib/household';
 import { field } from '@/lib/form';
 
 const KINDS = ['medicine', 'meal', 'activity'] as const;
 
 export async function addRoutine(form: FormData) {
-  const { sb, householdId } = await requireFamily();
+  const { sb, householdId } = await requireWriter();
   const time = field(form, 'time_of_day', 5);
   const kind = field(form, 'kind', 10) as (typeof KINDS)[number];
   const label = field(form, 'label', 80);
@@ -19,7 +19,7 @@ export async function addRoutine(form: FormData) {
 }
 
 export async function deleteRoutine(form: FormData) {
-  const { sb, householdId } = await requireFamily();
+  const { sb, householdId } = await requireWriter();
   await sb.from('routine_items').delete().eq('id', field(form, 'id', 64)).eq('household_id', householdId);
   revalidatePath('/family/routine');
 }

@@ -24,7 +24,7 @@ export default async function PortalLayout({ children }: { children: React.React
     : NAV;
   const banner = isDemoHousehold(householdId) ? (
     <div>
-      <span>Demo family. {passed ? 'This is the portal after Avni has passed.' : 'This is the portal while Avni is here.'}</span>
+      <span>Demo family. {passed ? 'This is the portal after Avni has passed.' : 'This is the portal while Avni is here.'} Changes aren&apos;t saved.</span>
       <form action={passed ? seeBefore : seeAfter}><button>{passed ? 'Back to before' : 'See after'}</button></form>
     </div>
   ) : undefined;

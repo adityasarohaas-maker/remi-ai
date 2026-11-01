@@ -27,17 +27,19 @@ export default async function ProfilePage() {
       <p className="mt-1 text-dim">{h.patient_name}</p>
       <form action={saveProfile} className="mt-6 space-y-4">
         <label className="block">What they like to be called<input name="preferred_name" defaultValue={h.preferred_name} className={input} /></label>
-        <LocaleFields language={h.language} timezone={h.timezone} locked={isDemoHousehold(householdId)} />
+        <LocaleFields language={h.language} timezone={h.timezone} locked={isDemoHousehold(householdId) || !canAdmin(role)} />
         <label className="block">About them — life story, favourite things, what calms them
           <textarea name="about" rows={5} defaultValue={h.about ?? ''} className={input} />
         </label>
         <label className="block">Home address<input name="home_address" defaultValue={h.home_address ?? ''} className={input} /></label>
         <label className="block">Main family contact (name)<input name="primary_contact_name" defaultValue={h.primary_contact_name ?? ''} className={input} /></label>
         <label className="block">Main family contact (phone)<input name="primary_contact_phone" type="tel" defaultValue={h.primary_contact_phone ?? ''} className={input} /></label>
-        <label className="block">Telegram chat id for alerts
-          <input name="telegram_chat_id" defaultValue={h.telegram_chat_id ?? ''} className={input} />
-          <span className="mt-1 block text-sm text-dim">Message your family&apos;s Remi bot once, then ask @userinfobot for your chat id.</span>
-        </label>
+        {canAdmin(role) && (
+          <label className="block">Telegram chat id for alerts
+            <input name="telegram_chat_id" defaultValue={h.telegram_chat_id ?? ''} className={input} />
+            <span className="mt-1 block text-sm text-dim">Message your family&apos;s Remi bot once, then ask @userinfobot for your chat id.</span>
+          </label>
+        )}
         <button className="rounded-lg bg-garden px-5 py-3 text-night">Save</button>
       </form>
     </section>

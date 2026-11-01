@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { synthesize, cloudVoiceConfigured, HD_TIMEOUT_MS, FALLBACK_TIMEOUT_MS } from '@/lib/azure-tts';
+import { synthesize, cloudVoiceConfigured, HD_TIMEOUT_MS, FALLBACK_TIMEOUT_MS, voiceAllowed, VOICE_PER_DAY, DEMO_VOICE_PER_DAY } from '@/lib/azure-tts';
+import { DEMO_HOUSEHOLD_ID } from '@/core/demo';
 
 describe('synthesize (Azure text-to-speech)', () => {
   const env = { AZURE_SPEECH_KEY: 'k', AZURE_SPEECH_REGION: 'centralindia' };
@@ -54,5 +55,20 @@ describe('synthesize (Azure text-to-speech)', () => {
     expect(cloudVoiceConfigured({})).toBe(false);
     expect(cloudVoiceConfigured({ AZURE_SPEECH_KEY: 'k' })).toBe(false);
     expect(cloudVoiceConfigured(env)).toBe(true);
+  });
+});
+
+describe('voiceAllowed', () => {
+  it('needs both the per-minute and the per-day budget', async () => {
+    const take = vi.fn(async (_h: string, bucket: string) => bucket !== 'voice-day');
+    expect(await voiceAllowed(take, 'h')).toBe(false);
+    expect(take).toHaveBeenCalledWith('h', 'voice-day', VOICE_PER_DAY, 86400);
+    expect(await voiceAllowed(vi.fn(async () => true), 'h')).toBe(true);
+  });
+  it('gives the public demo a smaller day', async () => {
+    const take = vi.fn(async () => true);
+    await voiceAllowed(take, DEMO_HOUSEHOLD_ID);
+    expect(take).toHaveBeenCalledWith(DEMO_HOUSEHOLD_ID, 'voice-day', DEMO_VOICE_PER_DAY, 86400);
+    expect(DEMO_VOICE_PER_DAY).toBeLessThan(VOICE_PER_DAY);
   });
 });

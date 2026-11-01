@@ -1,9 +1,9 @@
-import { requireDevice } from '@/lib/household';
+import { requireLivingDevice } from '@/lib/household';
 import { supabaseDeps } from '@/lib/deps';
 import { localParts } from '@/core/time';
 
 export async function POST(req: Request) {
-  const householdId = await requireDevice(req);
+  const householdId = await requireLivingDevice(req);
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
   const body = (await req.json().catch(() => null)) as { routineItemId?: unknown } | null;
   const deps = supabaseDeps();

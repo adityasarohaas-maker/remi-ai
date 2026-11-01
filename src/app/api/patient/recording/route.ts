@@ -1,11 +1,11 @@
-import { requireDevice } from '@/lib/household';
+import { requireLivingDevice } from '@/lib/household';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { supabaseDeps } from '@/lib/deps';
 import { clipPath, validateClip, isUuid, RECORDINGS_PER_MIN } from '@/core/recording';
 
 /** The tablet's recording of one turn, named by the tablet so the talk request already carries the id. */
 export async function POST(req: Request) {
-  const householdId = await requireDevice(req);
+  const householdId = await requireLivingDevice(req);
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
 
   const db = supabaseAdmin();

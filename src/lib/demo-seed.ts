@@ -208,4 +208,7 @@ export async function seedDemo(): Promise<void> {
       payload: { text: 'Where is Ramesh?', reply: 'Ramesh loved your Sunday walks to the temple. He always said your rajma was the best in Jaipur.', mood: 'sad', sensitiveTopic: 'Her husband Ramesh', fallback: false } },
     { household_id: DEMO_HOUSEHOLD_ID, type: 'face_query', created_at: t4.toISOString(), payload: { status: 'match', name: 'Rohan' } },
   ]);
+  // these turns count as gone through, so the family home shows them and the nightly pass leaves them alone
+  const { data: last } = await db.from('events').select('id').eq('household_id', DEMO_HOUSEHOLD_ID).order('id', { ascending: false }).limit(1).maybeSingle();
+  await db.from('households').update({ extracted_through: last?.id ?? 0 }).eq('id', DEMO_HOUSEHOLD_ID);
 }

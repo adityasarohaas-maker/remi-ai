@@ -1,6 +1,6 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { requireFamily, requireAdmin } from '@/lib/household';
+import { requireFamily, requireAdmin, requireAdminWriter } from '@/lib/household';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { signedClipUrl } from '@/lib/clips';
 import { openDueLetters, makeLetterLink } from '@/lib/letters';
@@ -24,10 +24,14 @@ export async function markMemory(memoryId: string, confidence: 'sure' | 'unsure'
 
 /** The family marks a day she was waiting for; anything sealed until then opens now. */
 export async function markEventHappened(form: FormData) {
-  const { sb, householdId } = await requireAdmin();
+  const { householdId, user } = await requireAdmin();
   const id = field(form, 'id', 64);
   if (!id) return;
-  await sb.from('life_events').update({ happened_on: new Date().toISOString().slice(0, 10) }).eq('id', id).eq('household_id', householdId);
+  // this opens what waits for the day: only the server may do it, and it writes down who asked
+  const db = supabaseAdmin();
+  const { data: marked } = await db.from('life_events').update({ happened_on: new Date().toISOString().slice(0, 10) }).eq('id', id).eq('household_id', householdId).select('id').maybeSingle();
+  if (!marked) return;
+  await db.from('events').insert({ household_id: householdId, type: 'event_marked', payload: { by: user.id, eventId: id } });
   await openDueLetters(householdId);
   revalidatePath('/family/story');
 }
@@ -41,7 +45,7 @@ async function letterFor(householdId: string, id: string): Promise<LetterRow | n
 
 /** An address for a letter to someone outside the family. Only the address changes; the words stay sealed. */
 export async function addRecipientEmail(form: FormData) {
-  const { householdId } = await requireAdmin();
+  const { householdId } = await requireAdminWriter();
   const id = field(form, 'id', 64);
   const email = field(form, 'email', 120).toLowerCase();
   if (!email.includes('@')) return;

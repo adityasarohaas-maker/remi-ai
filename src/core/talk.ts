@@ -1,3 +1,4 @@
+import { isDemoHousehold } from './demo';
 import type { HouseholdContext } from './types';
 import type { ChatMessage } from '@/lib/claude';
 import type { AlertReason } from '@/lib/alerts';
@@ -20,6 +21,8 @@ import { isSupportedLanguage } from './voices';
 
 export const MAX_INPUT = 500;
 export const RATE_PER_MIN = 20;         // model calls per household per minute
+export const TALK_PER_DAY = 1000;       // a ceiling on a day's model cost, far above a real day of talk
+export const DEMO_TALK_PER_DAY = 300;   // the demo link is public
 export const CLIENT_RATE_PER_MIN = 12;  // per caller IP — the demo tablet link is public
 export const SAFETY_ALERTS_PER_MIN = 3; // repeated distress in one minute is one alert, not ten
 export const TELL_FAMILY_PER_10_MIN = 3; // messages Remi passes on to the family
@@ -99,11 +102,12 @@ export async function handleTalk(deps: CoreDeps, input: {
     if (!(await deps.takeRateToken(householdId, 'join-in', 1, JOIN_IN_COOLDOWN_SECONDS))) return silent;
   }
 
-  const [householdOk, clientOk] = await Promise.all([
+  const [householdOk, dayOk, clientOk] = await Promise.all([
     deps.takeRateToken(householdId, 'talk', RATE_PER_MIN, 60),
+    deps.takeRateToken(householdId, 'talk-day', isDemoHousehold(householdId) ? DEMO_TALK_PER_DAY : TALK_PER_DAY, 86_400),
     input.clientKey ? deps.takeRateToken(householdId, `talk-client:${input.clientKey}`, CLIENT_RATE_PER_MIN, 60) : true,
   ]);
-  const allowed = householdOk && clientOk;
+  const allowed = householdOk && dayOk && clientOk;
   if (!allowed) {
     await Promise.allSettled(alerts);
     const busyReply = safety.length ? helpSentMessage(language, h.primaryContactName) : maySkip ? null : fallbackReply(language);

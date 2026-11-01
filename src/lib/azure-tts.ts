@@ -1,11 +1,24 @@
 // Remi's natural voice: Azure neural text-to-speech, called from the server so the key never
 // reaches the tablet. Without a key (or if Azure fails) the tablet uses the browser's own voice.
 import { cloudVoiceFor, hdVoiceFor, speechSsml } from '@/core/voices';
+import { isDemoHousehold } from '@/core/demo';
 
 type Env = Record<string, string | undefined>;
 
 /** Voice requests per household per minute: one per sentence, plenty for talk, a cap on runaway cost. */
 export const VOICE_PER_MIN = 90;
+/** A ceiling on a day's cost, far above a real day of talk; the demo link is public, so its day is smaller. */
+export const VOICE_PER_DAY = 1500;
+export const DEMO_VOICE_PER_DAY = 400;
+const DAY_SECONDS = 86_400;
+
+type TakeToken = (householdId: string, bucket: string, limit: number, windowSeconds: number) => Promise<boolean>;
+
+/** Asked before Azure is paid for a clip. Without this the words are spent even when the answer is no. */
+export async function voiceAllowed(take: TakeToken, householdId: string): Promise<boolean> {
+  if (!(await take(householdId, 'voice', VOICE_PER_MIN, 60))) return false;
+  return take(householdId, 'voice-day', isDemoHousehold(householdId) ? DEMO_VOICE_PER_DAY : VOICE_PER_DAY, DAY_SECONDS);
+}
 
 export function cloudVoiceConfigured(env: Env = process.env): boolean {
   return Boolean(env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION);

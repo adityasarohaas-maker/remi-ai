@@ -15,9 +15,10 @@ export async function signedClipUrl(sb: SupabaseClient, memoryId: string): Promi
 }
 
 /** Signs a recording the caller has already been allowed to hear. */
-export async function signedRecordingUrl(recordingId: string): Promise<string | null> {
+export async function signedRecordingUrl(recordingId: string, householdId?: string): Promise<string | null> {
   const db = supabaseAdmin();
-  const { data: r } = await db.from('recordings').select('storage_path').eq('id', recordingId).maybeSingle();
+  const query = db.from('recordings').select('storage_path').eq('id', recordingId);
+  const { data: r } = await (householdId ? query.eq('household_id', householdId) : query).maybeSingle();
   if (!r?.storage_path) return null;
   const { data, error } = await db.storage.from('voice').createSignedUrl(r.storage_path as string, CLIP_URL_SECONDS);
   if (error) { console.error('clip sign failed', error.message); return null; }

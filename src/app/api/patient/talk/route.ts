@@ -1,7 +1,7 @@
-import { requireDevice } from '@/lib/household';
+import { requireLivingDevice } from '@/lib/household';
 import { supabaseDeps } from '@/lib/deps';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { cloudVoiceConfigured, synthesize, VOICE_PER_MIN } from '@/lib/azure-tts';
+import { cloudVoiceConfigured, synthesize, voiceAllowed } from '@/lib/azure-tts';
 import { handleTalk, type TalkMode } from '@/core/talk';
 import { createSpokenReply } from '@/core/stream-speech';
 import { isSupportedLanguage, voiceLocale } from '@/core/voices';
@@ -14,7 +14,7 @@ async function photoOnScreen(householdId: string, id: string): Promise<{ id: str
 }
 
 export async function POST(req: Request) {
-  const householdId = await requireDevice(req);
+  const householdId = await requireLivingDevice(req);
   if (!householdId) return Response.json({ error: 'unknown device' }, { status: 401 });
   const body = (await req.json().catch(() => null)) as { text?: unknown; mode?: unknown; language?: unknown; voice?: unknown; recordingId?: unknown; photoId?: unknown; personName?: unknown } | null;
   const clientKey = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || undefined;
@@ -43,10 +43,8 @@ export async function POST(req: Request) {
       : Promise.resolve(supabaseAdmin().from('households').select('language').eq('id', householdId).single())
         .then(({ data }) => (data?.language as string | undefined) ?? 'en-US');
   const synth = async (text: string) => {
-    const audio = synthesize(text, voiceLocale(text, await voiceLanguage!));
-    audio.catch(() => {}); // handled by the caller; never an unhandled rejection when the limit says no
-    if (!(await deps.takeRateToken(householdId, 'voice', VOICE_PER_MIN, 60))) return null;
-    return audio;
+    if (!(await voiceAllowed(deps.takeRateToken, householdId))) return null;
+    return synthesize(text, voiceLocale(text, await voiceLanguage!));
   };
 
   // Streaming: one JSON line per piece of the reply — { delta } for text, or { say, audio } when the

@@ -69,6 +69,11 @@ describe('handleTalk', () => {
     expect((logged[0].payload.text as string).length).toBe(MAX_INPUT);
   });
 
+  it('stops at the day ceiling too', async () => {
+    const { deps, chat } = makeDeps({ takeRateToken: async (_h, bucket) => bucket !== 'talk-day' });
+    expect((await handleTalk(deps, { householdId: 'h1', text: 'hi' })).status).toBe(429);
+    expect(chat).not.toHaveBeenCalled();
+  });
   it('rate limits per household with a calm reply, without calling the model', async () => {
     const { deps, chat } = makeDeps({ takeRateToken: async (_h, bucket) => bucket !== 'talk' });
     const r = await handleTalk(deps, { householdId: 'h1', text: 'hi' });

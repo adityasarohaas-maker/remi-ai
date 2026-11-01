@@ -49,6 +49,7 @@ begin
   reset role;
 end $$;
 reset role;
+select set_config('request.jwt.claims', '', true); -- the server, with nobody signed in
 
 update public.households set status = 'passed' where id = '00000000-0000-4000-8000-0000000000f1';
 update public.life_events set happened_on = current_date where id = '00000000-0000-4000-8000-0000000000e1';

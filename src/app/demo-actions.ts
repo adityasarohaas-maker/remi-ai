@@ -7,7 +7,15 @@ import { openDueLetters } from '@/lib/letters';
 
 export async function startDemo() {
   const sb = await supabaseServer();
-  const { error } = await sb.auth.signInWithPassword({ email: process.env.DEMO_EMAIL!, password: process.env.DEMO_PASSWORD! });
+  const credentials = { email: process.env.DEMO_EMAIL!, password: process.env.DEMO_PASSWORD! };
+  let { error } = await sb.auth.signInWithPassword(credentials);
+  if (error) {
+    // A visitor's session can change its own login, and the database can't stop that. Put it back and try once more.
+    const db = supabaseAdmin();
+    const { data: owner } = await db.from('household_members').select('user_id').eq('household_id', DEMO_HOUSEHOLD_ID).eq('role', 'owner').maybeSingle();
+    if (owner) await db.auth.admin.updateUserById(owner.user_id as string, { ...credentials, email_confirm: true });
+    ({ error } = await sb.auth.signInWithPassword(credentials));
+  }
   if (error) throw new Error('The demo is resetting. Try again in a minute.');
   redirect('/family');
 }
