@@ -62,14 +62,42 @@ export function cloudVoiceFor(locale: string): string {
   return FAMILY[family] ?? LANGUAGES.find((l) => l.code.split('-')[0] === family)?.voice ?? DEFAULT_VOICE;
 }
 
+/**
+ * Azure's HD voices: breath, pauses and intonation closest to a real person, a moment slower to start.
+ * Remi tries these first and falls back to the language's standard voice above. Languages not listed
+ * have no HD voice yet.
+ */
+const HD_VOICES: Record<string, string> = {
+  'en-us': 'en-US-Ava:DragonHDLatestNeural',
+  'en-gb': 'en-GB-Sonia:DragonHDLatestNeural',
+  'en-in': 'en-IN-Neerja:DragonHDLatestNeural',
+  'hi-in': 'hi-in-diya:DragonHDOmniIndicNeural',
+  'es-es': 'es-ES-Ximena:DragonHDLatestNeural',
+  'es-mx': 'es-MX-Dalia:DragonHDLatestNeural',
+  'fr-fr': 'fr-FR-Vivienne:DragonHDLatestNeural',
+  'fr-ca': 'fr-CA-Sylvie:DragonHDLatestNeural',
+  'de-de': 'de-DE-Seraphina:DragonHDLatestNeural',
+  'it-it': 'it-IT-Isabella:DragonHDLatestNeural',
+  'pt-br': 'pt-BR-Thalita:DragonHDLatestNeural',
+  'zh-cn': 'zh-CN-Xiaochen:DragonHDLatestNeural',
+  'ja-jp': 'ja-JP-Nanami:DragonHDLatestNeural',
+  'ko-kr': 'ko-KR-SunHi:DragonHDLatestNeural',
+  'id-id': 'id-ID-Gadis:DragonHDLatestNeural',
+  'fil-ph': 'fil-PH-Blessica:DragonHDLatestNeural',
+};
+
+export function hdVoiceFor(locale: string): string | null {
+  return HD_VOICES[locale.toLowerCase()] ?? null;
+}
+
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
 /**
  * The request body for Azure text-to-speech: the family's voice at its natural pace. Remi plays one
  * clip per sentence, so Azure's usual padding of silence before and after each would add up to gaps.
  */
-export function speechSsml(text: string, locale: string): string {
+export function speechSsml(text: string, locale: string, voice: string = cloudVoiceFor(locale)): string {
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${esc(locale)}">`
-    + `<voice name="${cloudVoiceFor(locale)}"><mstts:silence type="Leading-exact" value="0ms"/><mstts:silence type="Tailing-exact" value="80ms"/>`
+    + `<voice name="${esc(voice)}"><mstts:silence type="Leading-exact" value="0ms"/><mstts:silence type="Tailing-exact" value="80ms"/>`
     + `${esc(text)}</voice></speak>`;
 }

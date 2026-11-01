@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cloudVoiceFor, speechSsml, voiceLocale, LANGUAGES, isSupportedLanguage } from '@/core/voices';
+import { cloudVoiceFor, hdVoiceFor, speechSsml, voiceLocale, LANGUAGES, isSupportedLanguage } from '@/core/voices';
 
 describe('cloudVoiceFor: a soft female neural voice for every family, worldwide', () => {
   it('uses the voice for the exact locale', () => {
@@ -47,5 +47,31 @@ describe('speechSsml', () => {
     expect(ssml).toContain('<mstts:silence type="Leading-exact" value="0ms"/>');
     expect(ssml).toContain('Tea &amp; &quot;biscuits&quot; &lt;now&gt;');
     expect(ssml).not.toContain('<now>');
+  });
+});
+
+describe('hdVoiceFor', () => {
+  it('gives the most human voice where Azure has one', () => {
+    expect(hdVoiceFor('en-IN')).toBe('en-IN-Neerja:DragonHDLatestNeural');
+    expect(hdVoiceFor('en-US')).toBe('en-US-Ava:DragonHDLatestNeural');
+    expect(hdVoiceFor('hi-IN')).toBe('hi-in-diya:DragonHDOmniIndicNeural');
+  });
+  it('matches the locale whatever its case, and has no HD voice for the rest', () => {
+    expect(hdVoiceFor('EN-in')).toBe('en-IN-Neerja:DragonHDLatestNeural');
+    expect(hdVoiceFor('bn-IN')).toBeNull();
+    expect(hdVoiceFor('xx-YY')).toBeNull();
+  });
+  it('only names languages a family can choose', () => {
+    for (const l of ['en-US', 'en-GB', 'en-IN', 'hi-IN', 'es-ES', 'es-MX', 'fr-FR', 'fr-CA', 'de-DE', 'it-IT', 'pt-BR', 'zh-CN', 'ja-JP', 'ko-KR', 'id-ID', 'fil-PH']) {
+      expect(isSupportedLanguage(l)).toBe(true);
+      expect(hdVoiceFor(l)).toMatch(/DragonHD/);
+    }
+  });
+});
+
+describe('speechSsml with a chosen voice', () => {
+  it('uses the voice it is given, and the standard voice otherwise', () => {
+    expect(speechSsml('Hi', 'en-IN', 'en-IN-Neerja:DragonHDLatestNeural')).toContain('<voice name="en-IN-Neerja:DragonHDLatestNeural">');
+    expect(speechSsml('Hi', 'en-IN')).toContain('<voice name="en-IN-NeerjaNeural">');
   });
 });
